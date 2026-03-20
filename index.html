@@ -135,7 +135,7 @@ body {
   font-size: 16px; font-weight: 700;
 }
 
-.sc-name { font-size: 13px; font-weight: 500; }
+.sc-name { font-size: 13px; font-weight: 500; display: flex; align-items: center; justify-content: center; min-height: 40px; }
 
 /* Admin link */
 .admin-link {
@@ -1188,6 +1188,7 @@ body {
 <!-- ===== LOGIN SCREEN ===== -->
 <div class="screen active" id="screen-login">
   <div class="login-wrap">
+    <div class="login-logo">Ashida Shoten</div>
     <div class="login-title">芦田商店<br><span>シフト管理</span></div>
 
     <div style="width:100%; margin-bottom:8px;">
@@ -1469,9 +1470,7 @@ function buildStaffGrid() {
     const color = getColor(s.name);
     const card = document.createElement('div');
     card.className = 'staff-card';
-    card.innerHTML = `
-      <div class="sc-avatar" style="background:${color}22;color:${color}">${s.name[0]}</div>
-      <div class="sc-name">${s.name}</div>`;
+    card.innerHTML = `<div class="sc-name">${s.name}</div>`;
     card.onclick = () => openPin('staff', s.name);
     grid.appendChild(card);
   });

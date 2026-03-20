@@ -1114,6 +1114,21 @@ body {
 }
 
 .settings-btn:hover { border-color: var(--tri); color: var(--tri); }
+
+.bottom-right-menu {
+  position: fixed;
+  bottom: 24px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 200;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
 </style>
 </head>
 <body>
@@ -1159,11 +1174,13 @@ body {
 <div class="screen" id="screen-mypage">
   <div class="topnav">
     <div class="topnav-logo">芦田商店<span>/</span>シフト</div>
-    <div class="topnav-right">
-      <span class="topnav-user" id="topnav-username"></span>
-      <button class="settings-btn" onclick="openSettings()" title="設定">⚙</button>
-      <button class="logout-btn" onclick="logout()">ログアウト</button>
-    </div>
+  </div>
+
+  <!-- 右下固定メニュー -->
+  <div class="bottom-right-menu">
+    <span class="topnav-user" id="topnav-username"></span>
+    <button class="settings-btn" onclick="openSettings()" title="設定">⚙</button>
+    <button class="logout-btn" onclick="logout()">ログアウト</button>
   </div>
 
   <div class="mypage-wrap">

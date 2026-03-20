@@ -320,50 +320,83 @@ body {
 .mytab-content { display: none; }
 .mytab-content.active { display: block; }
 
-/* ===== CONFIRMED SHIFTS VIEW ===== */
-.confirmed-month {
-  margin-bottom: 20px;
-}
-
-.cm-header {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  letter-spacing: 0.2em;
-  color: var(--muted);
-  text-transform: uppercase;
-  margin-bottom: 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
-}
-
-.conf-row {
-  display: grid;
-  grid-template-columns: 96px 28px 1fr;
-  gap: 8px;
+/* ===== CALENDAR VIEW ===== */
+.cal-nav {
+  display: flex;
   align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(46,46,46,0.5);
-  font-size: 13px;
+  justify-content: space-between;
+  margin-bottom: 14px;
 }
 
-.conf-date {
+.cal-month-label {
   font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  color: var(--text);
+  letter-spacing: 0.05em;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.cal-head {
+  text-align: center;
   font-size: 11px;
   color: var(--muted);
+  padding: 6px 0 8px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
-.conf-mark {
-  width: 24px; height: 24px;
-  border-radius: 6px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 700;
+.cal-head.sun { color: var(--ng); }
+.cal-head.sat { color: #4b9fe8; }
+
+.cal-cell {
+  border-radius: 8px;
+  padding: 5px 3px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 52px;
+  background: none;
 }
 
-.conf-mark.ok  { background: var(--ok-bg);  color: var(--ok); }
-.conf-mark.tri { background: var(--tri-bg); color: var(--tri); }
-.conf-mark.ng  { background: var(--ng-bg);  color: var(--ng); }
+.cal-cell.has-shift.shift-ok  { background: var(--ok-bg);  border: 1px solid rgba(75,232,160,0.25); }
+.cal-cell.has-shift.shift-tri { background: var(--tri-bg); border: 1px solid rgba(232,184,75,0.25); }
+.cal-cell.has-shift.shift-ng  { background: var(--ng-bg);  border: 1px solid rgba(232,75,75,0.2); }
 
-.conf-detail { font-size: 12px; color: var(--muted); }
+.cal-date {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  align-self: flex-start;
+  line-height: 1;
+  margin-bottom: 3px;
+}
+
+.cal-cell.sun .cal-date { color: rgba(232,75,75,0.7); }
+.cal-cell.sat .cal-date { color: rgba(75,159,232,0.7); }
+.cal-cell.has-shift .cal-date { color: inherit; opacity: 0.7; }
+
+.cal-mark {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cal-mark.ok  { color: var(--ok); }
+.cal-mark.tri { color: var(--tri); }
+.cal-mark.ng  { color: var(--ng); }
+
+.cal-time {
+  font-size: 8px;
+  color: var(--tri);
+  text-align: center;
+  line-height: 1.3;
+  margin-top: 2px;
+  white-space: nowrap;
+}
 
 .empty-state {
   text-align: center;
@@ -1339,58 +1372,72 @@ function switchMyTab(tab, btn) {
   if (tab === 'confirmed') renderConfirmed(currentUser.name);
 }
 
-// ===== CONFIRMED SHIFTS =====
+// ===== CONFIRMED SHIFTS (カレンダー) =====
+let confirmedMonthOffset = 0;
+
 function renderConfirmed(name) {
   const all = loadData().filter(d => d.name === name && d.status === 'confirmed');
   const list = document.getElementById('confirmed-list');
+  if (!list) return;
 
-  if (all.length === 0) {
-    list.innerHTML = `<div class="empty-state"><div class="ei">📅</div><p>確定されたシフトはまだありません</p></div>`;
-    return;
+  // 日付→シフト情報のマップ
+  const shiftMap = {};
+  all.forEach(item => {
+    item.days.forEach(d => { shiftMap[d.date] = d; });
+  });
+
+  const now = new Date();
+  const calBase = new Date(now.getFullYear(), now.getMonth() + confirmedMonthOffset, 1);
+  const year  = calBase.getFullYear();
+  const month = calBase.getMonth();
+  const firstDow  = new Date(year, month, 1).getDay();
+  const lastDate  = new Date(year, month + 1, 0).getDate();
+
+  const WD_HEADS = ['日','月','火','水','木','金','土'];
+  const hdClass  = ['sun','','','','','','sat'];
+
+  let html = `
+    <div class="cal-nav">
+      <button class="period-btn" onclick="changeConfirmedMonth(-1)">‹</button>
+      <div class="cal-month-label">${year}年 ${month + 1}月</div>
+      <button class="period-btn" onclick="changeConfirmedMonth(1)">›</button>
+    </div>
+    <div class="cal-grid">
+      ${WD_HEADS.map((w, i) => `<div class="cal-head ${hdClass[i]}">${w}</div>`).join('')}
+      ${Array(firstDow).fill('<div class="cal-cell"></div>').join('')}
+  `;
+
+  for (let d = 1; d <= lastDate; d++) {
+    const mm      = String(month + 1).padStart(2, '0');
+    const dd      = String(d).padStart(2, '0');
+    const dateStr = `${year}-${mm}-${dd}`;
+    const dow     = new Date(year, month, d).getDay();
+    const shift   = shiftMap[dateStr];
+
+    let cellCls = 'cal-cell';
+    if (dow === 0) cellCls += ' sun';
+    if (dow === 6) cellCls += ' sat';
+
+    let inner = `<div class="cal-date">${d}</div>`;
+    if (shift) {
+      cellCls += ` has-shift shift-${shift.status}`;
+      const mark = shift.status === 'ok' ? '○' : shift.status === 'tri' ? '△' : '×';
+      inner += `<div class="cal-mark ${shift.status}">${mark}</div>`;
+      if (shift.status === 'tri') {
+        const s = shift.start.replace(':00',''); const e = shift.end.replace(':00','');
+        inner += `<div class="cal-time">${s}〜${e}</div>`;
+      }
+    }
+    html += `<div class="${cellCls}">${inner}</div>`;
   }
 
-  // Group by year-month
-  const grouped = {};
-  all.forEach(item => {
-    item.days.forEach(d => {
-      const ym = d.date.slice(0, 7);
-      if (!grouped[ym]) grouped[ym] = [];
-      grouped[ym].push({ ...d, submittedAt: item.submittedAt });
-    });
-  });
+  html += `</div>`;
+  list.innerHTML = html;
+}
 
-  const markClass = { ok:'ok', tri:'tri', ng:'ng' };
-  const markLabel = { ok:'○', tri:'△', ng:'×' };
-
-  let html = '';
-  Object.keys(grouped).sort().reverse().forEach(ym => {
-    const [y, m] = ym.split('-');
-    const rows = grouped[ym]
-      .filter(d => d.status !== 'ng')
-      .sort((a,b) => a.date.localeCompare(b.date));
-
-    if (rows.length === 0) return;
-
-    html += `<div class="confirmed-month">
-      <div class="cm-header">${y}年 ${parseInt(m)}月</div>`;
-
-    rows.forEach(d => {
-      const dateObj = new Date(d.date + 'T00:00:00');
-      const dStr = dateObj.toLocaleDateString('ja-JP', { month:'short', day:'numeric', weekday:'short' });
-      const mc = markClass[d.status];
-      const ml = markLabel[d.status];
-      const detail = d.status === 'tri' ? `${d.start} 〜 ${d.end}` : '時間制限なし';
-      html += `<div class="conf-row">
-        <div class="conf-date">${dStr}</div>
-        <div class="conf-mark ${mc}">${ml}</div>
-        <div class="conf-detail">${detail}</div>
-      </div>`;
-    });
-
-    html += `</div>`;
-  });
-
-  list.innerHTML = html || `<div class="empty-state"><div class="ei">📅</div><p>確定された出勤日はありません</p></div>`;
+function changeConfirmedMonth(dir) {
+  confirmedMonthOffset += dir;
+  if (currentUser) renderConfirmed(currentUser.name);
 }
 
 // ===== PERIOD / DAYS =====
@@ -1867,9 +1914,10 @@ window.clearAll             = clearAll;
 window.toggleStaffSection   = toggleStaffSection;
 window.registerStaff        = registerStaff;
 window.deleteStaff          = deleteStaff;
-window.openRegisterOverlay  = openRegisterOverlay;
-window.closeRegisterOverlay = closeRegisterOverlay;
+window.openRegisterOverlay   = openRegisterOverlay;
+window.closeRegisterOverlay  = closeRegisterOverlay;
 window.submitRegisterOverlay = submitRegisterOverlay;
+window.changeConfirmedMonth  = changeConfirmedMonth;
 </script>
 </body>
 </html>

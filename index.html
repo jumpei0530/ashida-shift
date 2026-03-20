@@ -1038,7 +1038,7 @@ body {
 
 <script>
 // ===== CONFIG =====
-let STAFF_LIST = [
+const DEFAULT_STAFF = [
   { name: '田中', pin: '1111' },
   { name: '佐藤', pin: '2222' },
   { name: '山田', pin: '3333' },
@@ -1046,6 +1046,19 @@ let STAFF_LIST = [
   { name: '伊藤', pin: '5555' },
   { name: '渡辺', pin: '6666' },
 ];
+
+function loadStaff() {
+  try {
+    const s = localStorage.getItem('ashida_staff');
+    return s ? JSON.parse(s) : DEFAULT_STAFF;
+  } catch { return DEFAULT_STAFF; }
+}
+
+function saveStaff() {
+  localStorage.setItem('ashida_staff', JSON.stringify(STAFF_LIST));
+}
+
+let STAFF_LIST = loadStaff();
 
 const ADMIN_PIN = '0000';
 
@@ -1056,10 +1069,17 @@ function getColor(name) {
   return COLORS[h % COLORS.length];
 }
 
-// ===== STORAGE (in-memory) =====
-let _shiftData = [];
-const loadData = () => _shiftData;
-const saveData = d => { _shiftData = d; };
+// ===== STORAGE (localStorage) =====
+function loadData() {
+  try {
+    const s = localStorage.getItem('ashida_shifts');
+    return s ? JSON.parse(s) : [];
+  } catch { return []; }
+}
+
+function saveData(d) {
+  localStorage.setItem('ashida_shifts', JSON.stringify(d));
+}
 
 // ===== SESSION =====
 let currentUser = null; // { name, role: 'staff'|'admin' }
@@ -1512,6 +1532,7 @@ function registerStaff() {
   if (STAFF_LIST.find(s => s.name === name)) { alert('同じ氏名のスタッフが既に存在します'); return; }
 
   STAFF_LIST.push({ name, pin });
+  saveStaff();
   nameInput.value = '';
   pinInput.value  = '';
   buildStaffGrid();
@@ -1522,6 +1543,7 @@ function deleteStaff(name) {
   if (!confirm(`「${name}」を削除しますか？`)) return;
   const idx = STAFF_LIST.findIndex(s => s.name === name);
   if (idx !== -1) STAFF_LIST.splice(idx, 1);
+  saveStaff();
   buildStaffGrid();
   renderStaffList();
 }

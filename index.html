@@ -2592,11 +2592,11 @@ function renderAdminConfirm() {
           } else {
             timeStr = isSel ? '時間未設定 ✏️' : '○';
           }
-          const clickFn = (c.status === 'ok' && isSel)
+          // 選択済み → 時間モーダルを開く（○も△も同じ）
+          // 未選択 → 選択する
+          const clickFn = isSel
             ? `openAdminTimeModal('${dateStr}','${c.name}')`
-            : (c.status === 'ok' && !isSel)
-              ? `toggleConfirmStaff('${dateStr}','${c.name}')`
-              : `toggleConfirmStaff('${dateStr}','${c.name}')`;
+            : `toggleConfirmStaff('${dateStr}','${c.name}')`;
           return `<div class="confirm-staff-chip ${isSel ? 'selected' : ''}"
             data-date="${dateStr}" data-name="${c.name}"
             onclick="${clickFn}">
@@ -2622,7 +2622,16 @@ function openAdminTimeModal(dateStr, staffName) {
   pendingTimeName = staffName;
   const dt = new Date(dateStr + 'T00:00:00');
   const label = dt.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
-  document.getElementById('admin-time-modal-label').textContent = `${label} - ${staffName} さんの時間`;
+  // 申請時の元の時間を取得して参考表示
+  const sub = loadData().find(d => d.name === staffName);
+  const day = sub?.days.find(d => d.date === dateStr);
+  let refTime = '';
+  if (day?.status === 'tri') {
+    const s = (day.start||'').replace(':00','');
+    const e = (day.end === 'LAST'||day.end === 'ラスト') ? 'LAST' : (day.end||'').replace(':00','');
+    refTime = `（申請: ${s}〜${e}）`;
+  }
+  document.getElementById('admin-time-modal-label').textContent = `${label} - ${staffName} ${refTime}`;
   document.getElementById('admin-time-modal').style.display = 'block';
 }
 

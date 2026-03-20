@@ -1115,6 +1115,58 @@ body {
 
 .settings-btn:hover { border-color: var(--tri); color: var(--tri); }
 
+.list-check-btn {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: 'Noto Sans JP', sans-serif;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.list-check-btn:hover { border-color: var(--tri); }
+
+.staff-status-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 300;
+  display: flex; align-items: flex-end;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s;
+}
+.staff-status-overlay.visible { opacity: 1; pointer-events: all; }
+.staff-status-box {
+  background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  padding: 12px 20px 40px;
+  width: 100%;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.status-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.status-list-row:last-child { border-bottom: none; }
+.status-list-name { font-size: 15px; }
+.badge-unsubmitted {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(232,75,110,0.12);
+  color: var(--ng);
+  border: 1px solid var(--ng);
+}
+
 .bottom-right-menu {
   position: fixed;
   bottom: 24px;
@@ -1277,11 +1329,7 @@ body {
       </div>
     </div>
 
-    <div class="stats">
-      <div class="stat"><div class="stat-n" id="s-total"     style="color:var(--text)">0</div><div class="stat-l">合計</div></div>
-      <div class="stat"><div class="stat-n" id="s-pending"   style="color:var(--tri)">0</div><div class="stat-l">未確認</div></div>
-      <div class="stat"><div class="stat-n" id="s-confirmed" style="color:var(--ok)">0</div><div class="stat-l">確定</div></div>
-    </div>
+    <button class="list-check-btn" onclick="openStaffStatusList()">一覧確認</button>
 
     <div class="filters">
       <button class="filter-chip active" onclick="setFilter('all',this)">すべて</button>
@@ -1310,6 +1358,16 @@ body {
     </div>
 
     <button class="settings-close" onclick="closeSettings()">閉じる</button>
+  </div>
+</div>
+
+<!-- STAFF STATUS OVERLAY -->
+<div class="staff-status-overlay" id="staff-status-overlay" onclick="closeStaffStatusList(event)">
+  <div class="staff-status-box">
+    <div class="settings-handle"></div>
+    <div class="settings-title">提出状況</div>
+    <div id="staff-status-list"></div>
+    <button class="settings-close" onclick="closeStaffStatusList()">閉じる</button>
   </div>
 </div>
 
@@ -2077,12 +2135,28 @@ function clearAll() {
   if (confirm('全データを削除しますか？')) { saveData([]); renderAdmin(); }
 }
 
+function openStaffStatusList() {
+  const data = loadData();
+  const submittedNames = new Set(data.map(d => d.name));
+  const list = document.getElementById('staff-status-list');
+  list.innerHTML = STAFF_LIST.map(s => {
+    const submitted = submittedNames.has(s.name);
+    return `<div class="status-list-row">
+      <span class="status-list-name">${s.name}</span>
+      ${submitted ? '' : '<span class="badge-unsubmitted">未提出</span>'}
+    </div>`;
+  }).join('') || '<p style="color:var(--muted);text-align:center;padding:20px">スタッフが登録されていません</p>';
+  document.getElementById('staff-status-overlay').classList.add('visible');
+}
+
+function closeStaffStatusList(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('staff-status-overlay').classList.remove('visible');
+}
+
 function renderAdmin() {
   renderStaffList();
   const data = loadData();
-  document.getElementById('s-total').textContent     = data.length;
-  document.getElementById('s-pending').textContent   = data.filter(d => d.status === 'pending').length;
-  document.getElementById('s-confirmed').textContent = data.filter(d => d.status === 'confirmed').length;
 
   const filtered = currentFilter === 'all' ? data : data.filter(d => d.status === currentFilter);
   const list = document.getElementById('admin-cards');
@@ -2182,6 +2256,8 @@ window.pinDelete            = pinDelete;
 window.setFilter            = setFilter;
 window.updateStatus         = updateStatus;
 window.clearAll             = clearAll;
+window.openStaffStatusList  = openStaffStatusList;
+window.closeStaffStatusList = closeStaffStatusList;
 window.toggleStaffSection   = toggleStaffSection;
 window.registerStaff        = registerStaff;
 window.deleteStaff          = deleteStaff;

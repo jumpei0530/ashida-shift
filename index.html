@@ -305,6 +305,18 @@ body {
   box-shadow: 0 1px 4px rgba(0,0,0,0.5);
 }
 
+.tab-alert {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  margin-left: 5px;
+  vertical-align: middle;
+  position: relative; top: -1px;
+}
+
+.tab-alert.open { background: var(--ng); }
+.tab-alert.soon { background: var(--tri); }
+
 .mytab-content { display: none; }
 .mytab-content.active { display: block; }
 
@@ -1009,17 +1021,17 @@ body {
       <div class="profile-avatar" id="profile-avatar"></div>
       <div>
         <div class="profile-name" id="profile-name"></div>
-        <div class="profile-sub">芦田商店 スタッフ</div>
+        <div class="profile-sub">芦田商店 アルバイトスタッフ</div>
       </div>
     </div>
 
     <div class="mypage-tabs">
-      <button class="mypage-tab active" onclick="switchMyTab('submit', this)">シフト提出</button>
-      <button class="mypage-tab" onclick="switchMyTab('confirmed', this)">確定シフト</button>
+      <button class="mypage-tab active" onclick="switchMyTab('confirmed', this)">確定シフト</button>
+      <button class="mypage-tab" id="tab-submit" onclick="switchMyTab('submit', this)">シフト提出<span class="tab-alert" id="submit-tab-alert"></span></button>
     </div>
 
     <!-- SUBMIT TAB -->
-    <div class="mytab-content active" id="mytab-submit">
+    <div class="mytab-content" id="mytab-submit">
       <div id="mp-window-banner"></div>
 
       <div id="mp-form-body">
@@ -1062,7 +1074,7 @@ body {
     </div>
 
     <!-- CONFIRMED TAB -->
-    <div class="mytab-content" id="mytab-confirmed">
+    <div class="mytab-content active" id="mytab-confirmed">
       <div id="confirmed-list"></div>
     </div>
   </div>
@@ -1311,11 +1323,12 @@ function enterMyPage(name) {
 
   renderDays();
   checkSubmissionWindow();
+  updateSubmitTabAlert();
   renderConfirmed(name);
   showScreen('mypage');
 
-  // Reset to submit tab
-  switchMyTab('submit', document.querySelector('.mypage-tab'));
+  // デフォルトは確定シフトタブ
+  switchMyTab('confirmed', document.querySelector('.mypage-tab'));
 }
 
 function switchMyTab(tab, btn) {
@@ -1403,7 +1416,7 @@ function getPeriodDates(offset, period) {
   return dates;
 }
 
-function changeMonth(dir) { monthOffset += dir; renderDays(); checkSubmissionWindow(); }
+function changeMonth(dir) { monthOffset += dir; renderDays(); checkSubmissionWindow(); updateSubmitTabAlert(); }
 
 function setPeriod(period) {
   currentPeriod = period;
@@ -1411,6 +1424,7 @@ function setPeriod(period) {
   document.getElementById('tab-second').classList.toggle('active', period === 'second');
   renderDays();
   checkSubmissionWindow();
+  updateSubmitTabAlert();
 }
 
 function timeOptions() {
@@ -1623,6 +1637,30 @@ function showToast() {
   const t = document.getElementById('toast');
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ===== SUBMIT TAB ALERT =====
+function updateSubmitTabAlert() {
+  const badge = document.getElementById('submit-tab-alert');
+  if (!badge) return;
+
+  const now = new Date();
+  const { year, month } = getMonthYear(monthOffset);
+
+  // 前半・後半それぞれのウィンドウを確認
+  const windows = [
+    getSubmissionWindow('first',  year, month),
+    getSubmissionWindow('second', year, month),
+  ];
+
+  let state = null;
+  for (const win of windows) {
+    const daysUntil = (win.start - now) / (1000 * 60 * 60 * 24);
+    if (now >= win.start && now <= win.end) { state = 'open'; break; }
+    if (daysUntil > 0 && daysUntil <= 5)   { state = 'soon'; break; }
+  }
+
+  badge.className = 'tab-alert' + (state ? ` ${state}` : '');
 }
 
 // ===== REGISTER OVERLAY (login screen) =====

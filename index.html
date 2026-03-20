@@ -1229,6 +1229,47 @@ body {
   border: 1px solid var(--ng);
 }
 
+.test-mode-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.test-mode-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+.toggle-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  width: 18px; height: 18px;
+  left: 3px; top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+.toggle-switch input:checked + .toggle-track { background: var(--tri); }
+.toggle-switch input:checked + .toggle-track::after { transform: translateX(20px); }
+
 .bottom-right-menu {
   position: fixed;
   bottom: 24px;
@@ -1394,6 +1435,14 @@ body {
     <div class="admin-action-row">
       <button class="list-check-btn half" onclick="openStaffStatusList()">一覧確認</button>
       <button class="list-check-btn half" onclick="openAdminCalendar()">シフトカレンダー</button>
+    </div>
+
+    <div class="test-mode-row">
+      <span class="test-mode-label">テストモード（提出期間を強制オープン）</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="test-mode-toggle" onchange="toggleTestMode(this.checked)">
+        <span class="toggle-track"></span>
+      </label>
     </div>
 
     <div class="filters">
@@ -2026,12 +2075,20 @@ function getSubmissionWindow(period, year, month) {
   }
 }
 
+let testModeOn = false;
+
+function toggleTestMode(on) {
+  testModeOn = on;
+  // スタッフ画面が表示中なら即反映
+  if (currentUser?.role === 'staff') checkSubmissionWindow();
+}
+
 function checkSubmissionWindow() {
   const now = new Date();
   const { year, month } = getMonthYear(monthOffset);
   const win = getSubmissionWindow(currentPeriod, year, month);
-  const isOpen   = now >= win.start && now <= win.end;
-  const isPast   = now > win.end;
+  const isOpen   = testModeOn || (now >= win.start && now <= win.end);
+  const isPast   = !testModeOn && now > win.end;
 
   const banner   = document.getElementById('mp-window-banner');
   const formBody = document.getElementById('mp-form-body');
@@ -2462,6 +2519,7 @@ window.updateStatus         = updateStatus;
 window.clearAll             = clearAll;
 window.openStaffStatusList  = openStaffStatusList;
 window.closeStaffStatusList = closeStaffStatusList;
+window.toggleTestMode       = toggleTestMode;
 window.openAdminCalendar    = openAdminCalendar;
 window.closeAdminCalendar   = closeAdminCalendar;
 window.adminCalMonth        = adminCalMonth;

@@ -2535,12 +2535,13 @@ function adminConfirmPeriod(period, btn) {
 }
 
 function toggleConfirmStaff(dateStr, staffName) {
+  // 長押しで開いた場合はタップ切替をスキップ
+  if (longPressTriggered) { longPressTriggered = false; return; }
   if (!adminConfirmSelections[dateStr]) adminConfirmSelections[dateStr] = [];
   const arr = adminConfirmSelections[dateStr];
   const idx = arr.indexOf(staffName);
   if (idx >= 0) arr.splice(idx, 1);
   else arr.push(staffName);
-  // チップの見た目を即時更新
   const chip = document.querySelector(`.confirm-staff-chip[data-date="${dateStr}"][data-name="${staffName}"]`);
   if (chip) chip.classList.toggle('selected', arr.includes(staffName));
 }
@@ -2592,14 +2593,14 @@ function renderAdminConfirm() {
           } else {
             timeStr = isSel ? '時間未設定 ✏️' : '○';
           }
-          // 選択済み → 時間モーダルを開く（○も△も同じ）
-          // 未選択 → 選択する
-          const clickFn = isSel
-            ? `openAdminTimeModal('${dateStr}','${c.name}')`
-            : `toggleConfirmStaff('${dateStr}','${c.name}')`;
+          // タップ = 選択切替、長押し = 時間プリセットモーダル
           return `<div class="confirm-staff-chip ${isSel ? 'selected' : ''}"
             data-date="${dateStr}" data-name="${c.name}"
-            onclick="${clickFn}">
+            onclick="toggleConfirmStaff('${dateStr}','${c.name}')"
+            oncontextmenu="event.preventDefault(); openAdminTimeModal('${dateStr}','${c.name}')"
+            ontouchstart="startLongPress('${dateStr}','${c.name}',event)"
+            ontouchend="clearLongPress()"
+            ontouchmove="clearLongPress()">
             ${c.name}<br><span class="confirm-time-label">${timeStr}</span>
           </div>`;
         }).join('')}</div>`;
@@ -2615,6 +2616,22 @@ function renderAdminConfirm() {
 
   document.getElementById('admin-confirm-body').innerHTML = html ||
     '<p style="color:var(--muted);text-align:center;padding:20px">データがありません</p>';
+}
+
+let longPressTimer = null;
+let longPressTriggered = false;
+
+function startLongPress(dateStr, staffName, e) {
+  longPressTriggered = false;
+  longPressTimer = setTimeout(() => {
+    longPressTriggered = true;
+    longPressTimer = null;
+    openAdminTimeModal(dateStr, staffName);
+  }, 500);
+}
+
+function clearLongPress() {
+  if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
 }
 
 function openAdminTimeModal(dateStr, staffName) {
@@ -2907,6 +2924,8 @@ window.closeAdminConfirm    = closeAdminConfirm;
 window.adminConfirmMonth    = adminConfirmMonth;
 window.adminConfirmPeriod   = adminConfirmPeriod;
 window.toggleConfirmStaff   = toggleConfirmStaff;
+window.startLongPress       = startLongPress;
+window.clearLongPress       = clearLongPress;
 window.openAdminTimeModal   = openAdminTimeModal;
 window.selectAdminTime      = selectAdminTime;
 window.cancelAdminTime      = cancelAdminTime;

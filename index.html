@@ -540,7 +540,7 @@ body {
 .status-btn {
   flex: 1; height: 44px;
   border-radius: 8px;
-  border: 1px solid var(--surface2);
+  border: 1px solid var(--border);
   background: var(--surface);
   font-size: 16px; font-weight: 700;
   cursor: pointer;
@@ -550,7 +550,7 @@ body {
 }
 
 .status-btn[data-status="ok"].selected  { background: var(--ok-bg);  border-color: var(--ok);  color: var(--ok); }
-.status-btn[data-status="tri"].selected { background: var(--tri);    border-color: var(--tri); color: var(--bg); }
+.status-btn[data-status="tri"].selected { background: var(--tri);    border-color: var(--tri); color: var(--tri-mark); }
 .status-btn[data-status="ng"].selected  { background: var(--ng-bg);  border-color: var(--ng);  color: var(--ng); }
 
 .time-picker {
@@ -607,7 +607,7 @@ body {
 .submit-btn {
   width: 100%; padding: 16px;
   background: var(--tri);
-  color: var(--bg);
+  color: var(--tri-mark);
   border: none;
   border-radius: var(--radius);
   font-family: 'Noto Sans JP', sans-serif;

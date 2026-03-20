@@ -354,12 +354,14 @@ body {
 
 .cal-cell {
   border-radius: 8px;
-  padding: 5px 3px 4px;
+  padding: 5px 3px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   min-height: 52px;
   background: none;
+  gap: 2px;
 }
 
 .cal-cell.has-shift.shift-ok  { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); }
@@ -367,33 +369,28 @@ body {
 .cal-cell.has-shift.shift-ng  { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); }
 
 .cal-date {
-  font-size: 10px;
+  font-size: 12px;
   font-family: 'JetBrains Mono', monospace;
   color: var(--muted);
-  align-self: flex-start;
   line-height: 1;
-  margin-bottom: 3px;
 }
 
 .cal-cell.sun .cal-date,
 .cal-cell.holiday .cal-date { color: rgba(232,75,75,0.7); }
 .cal-cell.sat .cal-date { color: rgba(75,159,232,0.7); }
-.cal-cell.has-shift .cal-date { color: inherit; opacity: 0.7; }
 
 .cal-mark {
-  font-size: 17px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1;
-  margin-top: auto;
   color: rgba(255,255,255,0.5);
 }
 
 .cal-time {
-  font-size: 9px;
+  font-size: 8px;
   color: rgba(255,255,255,0.5);
   text-align: center;
   line-height: 1.3;
-  margin-top: auto;
   white-space: nowrap;
   font-family: 'JetBrains Mono', monospace;
 }
@@ -1433,7 +1430,8 @@ function renderConfirmed(name) {
     if (shift) {
       cellCls += ` has-shift shift-${shift.status}`;
       if (shift.status === 'tri') {
-        const s = shift.start.replace(':00',''); const e = shift.end.replace(':00','');
+        const s = shift.start.replace(':00','');
+        const e = shift.end === 'ラスト' ? 'ラスト' : shift.end.replace(':00','');
         inner += `<div class="cal-time">${s}〜${e}</div>`;
       } else {
         const mark = shift.status === 'ok' ? '○' : '×';
@@ -1495,7 +1493,7 @@ function timeOptions() {
   return opts;
 }
 
-function makeTimeSelect(defaultVal) {
+function makeTimeSelect(defaultVal, includeRast = false) {
   const opts = timeOptions();
   const sel = document.createElement('select');
   sel.className = 'time-select';
@@ -1505,6 +1503,12 @@ function makeTimeSelect(defaultVal) {
     if (t === defaultVal) o.selected = true;
     sel.appendChild(o);
   });
+  if (includeRast) {
+    const o = document.createElement('option');
+    o.value = 'ラスト'; o.textContent = 'ラスト';
+    if (defaultVal === 'ラスト') o.selected = true;
+    sel.appendChild(o);
+  }
   return sel;
 }
 
@@ -1556,7 +1560,7 @@ function renderDays() {
     rangeRow.className = 'time-range-row';
     const startSel = makeTimeSelect('17:00'); startSel.id = `ts-${dateStr}`;
     const arrow = document.createElement('div'); arrow.className = 'time-arrow'; arrow.textContent = '〜';
-    const endSel = makeTimeSelect('23:00');   endSel.id = `te-${dateStr}`;
+    const endSel = makeTimeSelect('ラスト', true); endSel.id = `te-${dateStr}`;
     rangeRow.appendChild(startSel); rangeRow.appendChild(arrow); rangeRow.appendChild(endSel);
     timePicker.appendChild(rangeRow);
 

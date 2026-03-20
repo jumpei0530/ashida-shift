@@ -362,6 +362,7 @@ body {
   min-height: 52px;
   background: none;
   gap: 2px;
+  position: relative;
 }
 
 .cal-cell.has-shift.shift-ok  { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); }
@@ -369,10 +370,13 @@ body {
 .cal-cell.has-shift.shift-ng  { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); }
 
 .cal-date {
-  font-size: 12px;
+  font-size: 10px;
   font-family: 'JetBrains Mono', monospace;
   color: var(--muted);
   line-height: 1;
+  position: absolute;
+  top: 4px;
+  left: 5px;
 }
 
 .cal-cell.sun .cal-date,
@@ -1431,7 +1435,7 @@ function renderConfirmed(name) {
       cellCls += ` has-shift shift-${shift.status}`;
       if (shift.status === 'tri') {
         const s = shift.start.replace(':00','');
-        const e = shift.end === 'ラスト' ? 'ラスト' : shift.end.replace(':00','');
+        const e = (shift.end === 'LAST' || shift.end === 'ラスト') ? 'LAST' : shift.end.replace(':00','');
         inner += `<div class="cal-time">${s}〜${e}</div>`;
       } else {
         const mark = shift.status === 'ok' ? '○' : '×';
@@ -1505,8 +1509,8 @@ function makeTimeSelect(defaultVal, includeRast = false) {
   });
   if (includeRast) {
     const o = document.createElement('option');
-    o.value = 'ラスト'; o.textContent = 'ラスト';
-    if (defaultVal === 'ラスト') o.selected = true;
+    o.value = 'LAST'; o.textContent = 'LAST';
+    if (defaultVal === 'LAST') o.selected = true;
     sel.appendChild(o);
   }
   return sel;
@@ -1560,7 +1564,7 @@ function renderDays() {
     rangeRow.className = 'time-range-row';
     const startSel = makeTimeSelect('17:00'); startSel.id = `ts-${dateStr}`;
     const arrow = document.createElement('div'); arrow.className = 'time-arrow'; arrow.textContent = '〜';
-    const endSel = makeTimeSelect('ラスト', true); endSel.id = `te-${dateStr}`;
+    const endSel = makeTimeSelect('LAST', true); endSel.id = `te-${dateStr}`;
     rangeRow.appendChild(startSel); rangeRow.appendChild(arrow); rangeRow.appendChild(endSel);
     timePicker.appendChild(rangeRow);
 

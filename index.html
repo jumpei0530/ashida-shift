@@ -2594,7 +2594,7 @@ function renderAdminConfirm() {
           } else if (c.status === 'tri') {
             timeStr = (c.start||'').replace(':00','') + '〜' + ((c.end === 'LAST'||c.end === 'ラスト') ? 'LAST' : (c.end||'').replace(':00',''));
           } else {
-            timeStr = isSel ? '時間未設定 ✏️' : '○';
+            timeStr = '17〜LAST';
           }
           // タップ = 選択切替、長押し = 時間プリセットモーダル
           return `<div class="confirm-staff-chip ${isSel ? 'selected' : ''}"
@@ -2728,7 +2728,7 @@ function publishShifts() {
       // 申請データから取得
       const sub = allData.find(d => d.name === name);
       const dayEntry = sub?.days.find(d => d.date === date);
-      return { name, start: dayEntry?.start || '', end: dayEntry?.end || '' };
+      return { name, start: dayEntry?.start || '17:00', end: dayEntry?.end || 'LAST' };
     });
   });
 

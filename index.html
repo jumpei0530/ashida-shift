@@ -1016,13 +1016,15 @@ function verifyPin() {
   }
 
   if (correct) {
-    currentUser = { name: pinTarget.name || '管理者', role: pinTarget.role };
+    const role = pinTarget.role;
+    const name = pinTarget.name;
+    currentUser = { name: name || '管理者', role };
     closePin();
-    if (pinTarget.role === 'admin') {
+    if (role === 'admin') {
       showScreen('admin');
       renderAdmin();
     } else {
-      enterMyPage(pinTarget.name);
+      enterMyPage(name);
     }
   } else {
     updatePinDots('error');

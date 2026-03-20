@@ -1152,9 +1152,6 @@ const DEFAULT_STAFF = [
   { name: '田中', pin: '1111' },
   { name: '佐藤', pin: '2222' },
   { name: '山田', pin: '3333' },
-  { name: '鈴木', pin: '4444' },
-  { name: '伊藤', pin: '5555' },
-  { name: '渡辺', pin: '6666' },
 ];
 
 function loadStaff() {
@@ -1643,6 +1640,7 @@ function submitRegisterOverlay() {
   if (!name) { err.textContent = '氏名を入力してください'; return; }
   if (!/^\d{4}$/.test(pin)) { err.textContent = 'PINは4桁の数字で入力してください'; return; }
   if (STAFF_LIST.find(s => s.name === name)) { err.textContent = '同じ氏名のスタッフが既に存在します'; return; }
+  if (STAFF_LIST.find(s => s.pin === pin)) { err.textContent = 'そのPINは既に使われています'; return; }
 
   STAFF_LIST.push({ name, pin });
   saveStaff();
@@ -1668,6 +1666,7 @@ function registerStaff() {
   if (!name) { alert('氏名を入力してください'); return; }
   if (!/^\d{4}$/.test(pin)) { alert('PINは4桁の数字で入力してください'); return; }
   if (STAFF_LIST.find(s => s.name === name)) { alert('同じ氏名のスタッフが既に存在します'); return; }
+  if (STAFF_LIST.find(s => s.pin === pin)) { alert('そのPINは既に使われています'); return; }
 
   STAFF_LIST.push({ name, pin });
   saveStaff();

@@ -1115,11 +1115,15 @@ body {
 
 .settings-btn:hover { border-color: var(--tri); color: var(--tri); }
 
+.admin-action-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
 .list-check-btn {
   display: block;
   width: 100%;
   padding: 12px;
-  margin-bottom: 16px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -1129,7 +1133,65 @@ body {
   cursor: pointer;
   transition: border-color 0.15s;
 }
+.list-check-btn.half { flex: 1; }
 .list-check-btn:hover { border-color: var(--tri); }
+
+.admin-cal-box {
+  max-height: 85vh;
+}
+.admin-cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.admin-cal-period-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+/* 管理者カレンダー日別カード */
+.admin-day-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.admin-day-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface2);
+  font-size: 13px;
+  font-weight: 600;
+}
+.admin-day-head .dow-badge {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+.dow-badge.sun, .dow-badge.holiday { background: rgba(232,75,75,0.15); color: var(--ng); }
+.dow-badge.sat { background: rgba(75,159,232,0.15); color: #4b9fe8; }
+.dow-badge.weekday { background: var(--surface); color: var(--muted); }
+.admin-day-rows { padding: 4px 0; }
+.admin-day-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.admin-day-row:last-child { border-bottom: none; }
+.admin-day-staff { font-weight: 500; }
+.admin-day-time {
+  font-size: 12px;
+  color: var(--tri);
+  font-family: 'JetBrains Mono', monospace;
+}
 
 .staff-status-overlay {
   position: fixed; inset: 0;
@@ -1329,7 +1391,10 @@ body {
       </div>
     </div>
 
-    <button class="list-check-btn" onclick="openStaffStatusList()">一覧確認</button>
+    <div class="admin-action-row">
+      <button class="list-check-btn half" onclick="openStaffStatusList()">一覧確認</button>
+      <button class="list-check-btn half" onclick="openAdminCalendar()">シフトカレンダー</button>
+    </div>
 
     <div class="filters">
       <button class="filter-chip active" onclick="setFilter('all',this)">すべて</button>
@@ -1368,6 +1433,24 @@ body {
     <div class="settings-title">提出状況</div>
     <div id="staff-status-list"></div>
     <button class="settings-close" onclick="closeStaffStatusList()">閉じる</button>
+  </div>
+</div>
+
+<!-- ADMIN CALENDAR OVERLAY -->
+<div class="staff-status-overlay" id="admin-cal-overlay" onclick="closeAdminCalendar(event)">
+  <div class="staff-status-box admin-cal-box">
+    <div class="settings-handle"></div>
+    <div class="admin-cal-header">
+      <button class="period-btn" onclick="adminCalMonth(-1)">‹</button>
+      <div class="cal-month-label" id="admin-cal-label"></div>
+      <button class="period-btn" onclick="adminCalMonth(1)">›</button>
+    </div>
+    <div class="admin-cal-period-row">
+      <button class="filter-chip active" id="admin-cal-first"  onclick="adminCalPeriod('first',this)">前半 1〜15日</button>
+      <button class="filter-chip"        id="admin-cal-second" onclick="adminCalPeriod('second',this)">後半 16〜末日</button>
+    </div>
+    <div id="admin-cal-body"></div>
+    <button class="settings-close" onclick="closeAdminCalendar()">閉じる</button>
   </div>
 </div>
 
@@ -2166,6 +2249,115 @@ function closeStaffStatusList(e) {
   document.getElementById('staff-status-overlay').classList.remove('visible');
 }
 
+// ===== ADMIN CALENDAR =====
+let adminCalOffset = 0;
+let adminCalPeriodVal = 'first';
+
+function openAdminCalendar() {
+  // 直近の期限切れ期間をデフォルトに
+  const now = new Date();
+  let found = false;
+  for (let offset = 2; offset >= -1; offset--) {
+    const { year, month } = getMonthYear(offset);
+    for (const period of ['second', 'first']) {
+      const win = getSubmissionWindow(period, year, month);
+      if (now > win.end) {
+        adminCalOffset = offset;
+        adminCalPeriodVal = period;
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+  }
+  renderAdminCalendar();
+  document.getElementById('admin-cal-overlay').classList.add('visible');
+}
+
+function closeAdminCalendar(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('admin-cal-overlay').classList.remove('visible');
+}
+
+function adminCalMonth(dir) {
+  adminCalOffset += dir;
+  renderAdminCalendar();
+}
+
+function adminCalPeriod(period, btn) {
+  adminCalPeriodVal = period;
+  document.getElementById('admin-cal-first').classList.toggle('active', period === 'first');
+  document.getElementById('admin-cal-second').classList.toggle('active', period === 'second');
+  renderAdminCalendar();
+}
+
+function renderAdminCalendar() {
+  const { year, month } = getMonthYear(adminCalOffset);
+  document.getElementById('admin-cal-label').textContent = `${year}年 ${month + 1}月`;
+
+  const lastDate = new Date(year, month + 1, 0).getDate();
+  const startDay = adminCalPeriodVal === 'first' ? 1 : 16;
+  const endDay   = adminCalPeriodVal === 'first' ? 15 : lastDate;
+
+  const WD = ['日','月','火','水','木','金','土'];
+
+  // 全confirmed提出から日付→スタッフマップを作成
+  const data = loadData().filter(d => d.status === 'confirmed');
+  const dayMap = {}; // { 'YYYY-MM-DD': [{name, start, end}] }
+  data.forEach(item => {
+    item.days.forEach(d => {
+      if (!dayMap[d.date]) dayMap[d.date] = [];
+      dayMap[d.date].push({ name: item.name, shift: d });
+    });
+  });
+
+  let html = '';
+  for (let day = startDay; day <= endDay; day++) {
+    const mm = String(month + 1).padStart(2, '0');
+    const dd = String(day).padStart(2, '0');
+    const dateStr = `${year}-${mm}-${dd}`;
+    const dow = new Date(year, month, day).getDay();
+    const isHoliday = !!holidayMap[dateStr];
+    const entries = dayMap[dateStr] || [];
+
+    const dowLabel = WD[dow];
+    let dowCls = 'weekday';
+    if (isHoliday || dow === 0) dowCls = 'holiday';
+    else if (dow === 6) dowCls = 'sat';
+
+    const rowsHtml = entries.length === 0
+      ? `<div class="admin-day-rows"><div class="admin-day-row"><span style="color:var(--muted);font-size:12px">提出なし</span></div></div>`
+      : `<div class="admin-day-rows">${entries.map(e => {
+          const s = e.shift;
+          let timeStr = '';
+          if (s.status === 'tri') {
+            const st = s.start.replace(':00','');
+            const en = (s.end === 'LAST' || s.end === 'ラスト') ? 'LAST' : s.end.replace(':00','');
+            timeStr = `${st}〜${en}`;
+          } else if (s.status === 'ok') {
+            timeStr = '○';
+          } else {
+            timeStr = '×';
+          }
+          return `<div class="admin-day-row">
+            <span class="admin-day-staff">${e.name}</span>
+            <span class="admin-day-time">${timeStr}</span>
+          </div>`;
+        }).join('')}</div>`;
+
+    html += `<div class="admin-day-card">
+      <div class="admin-day-head">
+        <span>${month + 1}/${day}</span>
+        <span class="dow-badge ${dowCls}">${dowLabel}${isHoliday ? '・祝' : ''}</span>
+      </div>
+      ${rowsHtml}
+    </div>`;
+  }
+
+  document.getElementById('admin-cal-body').innerHTML = html ||
+    '<p style="color:var(--muted);text-align:center;padding:20px">データがありません</p>';
+}
+
 function renderAdmin() {
   renderStaffList();
   const data = loadData();
@@ -2270,6 +2462,10 @@ window.updateStatus         = updateStatus;
 window.clearAll             = clearAll;
 window.openStaffStatusList  = openStaffStatusList;
 window.closeStaffStatusList = closeStaffStatusList;
+window.openAdminCalendar    = openAdminCalendar;
+window.closeAdminCalendar   = closeAdminCalendar;
+window.adminCalMonth        = adminCalMonth;
+window.adminCalPeriod       = adminCalPeriod;
 window.toggleStaffSection   = toggleStaffSection;
 window.registerStaff        = registerStaff;
 window.deleteStaff          = deleteStaff;

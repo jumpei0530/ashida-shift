@@ -1610,13 +1610,16 @@ body {
     </div>
     <div id="admin-confirm-body"></div>
     <!-- 時間プリセット選択 -->
-    <div id="admin-time-modal" style="display:none; position:sticky; bottom:60px; background:var(--surface2); border:1px solid var(--tri); border-radius:12px; padding:12px; margin-bottom:8px;">
-      <div style="font-size:12px; color:var(--muted); margin-bottom:8px;" id="admin-time-modal-label"></div>
-      <div style="display:flex; flex-direction:column; gap:6px;">
-        <button class="time-preset-btn" onclick="selectAdminTime('05:00','LAST')">5時入りラスト</button>
-        <button class="time-preset-btn" onclick="selectAdminTime('18:00','LAST')">18時入りラスト</button>
-        <button class="time-preset-btn" onclick="selectAdminTime('19:00','23:00')">19時入り23時</button>
-        <button class="time-preset-btn cancel" onclick="cancelAdminTime()">キャンセル</button>
+    <div id="admin-time-modal" style="display:none; position:sticky; bottom:60px; background:var(--surface2); border:1px solid var(--tri); border-radius:12px; padding:14px; margin-bottom:8px;">
+      <div style="font-size:12px; color:var(--muted); margin-bottom:10px;" id="admin-time-modal-label"></div>
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+        <select id="admin-time-start" class="time-select" style="flex:1"></select>
+        <span style="color:var(--muted); font-size:13px;">〜</span>
+        <select id="admin-time-end" class="time-select" style="flex:1"></select>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="time-preset-btn" style="flex:1; text-align:center;" onclick="confirmAdminTime()">確定</button>
+        <button class="time-preset-btn cancel" style="flex:1; text-align:center;" onclick="cancelAdminTime()">キャンセル</button>
       </div>
     </div>
     <button class="publish-btn" onclick="publishShifts()">発表する</button>
@@ -2639,9 +2642,14 @@ function openAdminTimeModal(dateStr, staffName) {
   pendingTimeName = staffName;
   const dt = new Date(dateStr + 'T00:00:00');
   const label = dt.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
-  // 申請時の元の時間を取得して参考表示
+
+  // 現在の設定 or 申請時の時間をデフォルト値に
+  const ov = adminTimeOverrides[`${dateStr}::${staffName}`];
   const sub = loadData().find(d => d.name === staffName);
   const day = sub?.days.find(d => d.date === dateStr);
+  const defStart = ov?.start || day?.start || '17:00';
+  const defEnd   = ov?.end   || day?.end   || 'LAST';
+
   let refTime = '';
   if (day?.status === 'tri') {
     const s = (day.start||'').replace(':00','');
@@ -2649,13 +2657,46 @@ function openAdminTimeModal(dateStr, staffName) {
     refTime = `（申請: ${s}〜${e}）`;
   }
   document.getElementById('admin-time-modal-label').textContent = `${label} - ${staffName} ${refTime}`;
+
+  // セレクターを生成
+  const startSel = document.getElementById('admin-time-start');
+  const endSel   = document.getElementById('admin-time-end');
+  startSel.innerHTML = '';
+  endSel.innerHTML   = '';
+  const opts = timeOptions();
+  // 入り時間は5:00〜23:00まで追加
+  const startOpts = [];
+  for (let h = 5; h <= 23; h++) {
+    startOpts.push(`${String(h).padStart(2,'0')}:00`);
+    if (h < 23) startOpts.push(`${String(h).padStart(2,'0')}:30`);
+  }
+  startOpts.forEach(t => {
+    const o = document.createElement('option');
+    o.value = t; o.textContent = t;
+    if (t === defStart) o.selected = true;
+    startSel.appendChild(o);
+  });
+  opts.forEach(t => {
+    const o = document.createElement('option');
+    o.value = t; o.textContent = t;
+    if (t === defEnd) o.selected = true;
+    endSel.appendChild(o);
+  });
+  const lastOpt = document.createElement('option');
+  lastOpt.value = 'LAST'; lastOpt.textContent = 'LAST';
+  if (defEnd === 'LAST' || defEnd === 'ラスト') lastOpt.selected = true;
+  endSel.appendChild(lastOpt);
+
   document.getElementById('admin-time-modal').style.display = 'block';
+  // モーダルへスクロール
+  document.getElementById('admin-time-modal').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function selectAdminTime(start, end) {
+function confirmAdminTime() {
   if (!pendingTimeDate || !pendingTimeName) return;
+  const start = document.getElementById('admin-time-start').value;
+  const end   = document.getElementById('admin-time-end').value;
   adminTimeOverrides[`${pendingTimeDate}::${pendingTimeName}`] = { start, end };
-  // 選択済みに確実に追加
   if (!adminConfirmSelections[pendingTimeDate]) adminConfirmSelections[pendingTimeDate] = [];
   if (!adminConfirmSelections[pendingTimeDate].includes(pendingTimeName)) {
     adminConfirmSelections[pendingTimeDate].push(pendingTimeName);
@@ -2927,7 +2968,7 @@ window.toggleConfirmStaff   = toggleConfirmStaff;
 window.startLongPress       = startLongPress;
 window.clearLongPress       = clearLongPress;
 window.openAdminTimeModal   = openAdminTimeModal;
-window.selectAdminTime      = selectAdminTime;
+window.confirmAdminTime     = confirmAdminTime;
 window.cancelAdminTime      = cancelAdminTime;
 window.publishShifts        = publishShifts;
 window.openAdminCalendar    = openAdminCalendar;

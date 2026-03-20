@@ -1146,7 +1146,23 @@ body {
 
 <div class="toast" id="toast">✓ 提出が完了しました！</div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
+
+// ===== FIREBASE =====
+const firebaseConfig = {
+  apiKey: "AIzaSyC66WIU2nHsMfIJAveJK450cF1XsmiUW5k",
+  authDomain: "ashida-shift.firebaseapp.com",
+  databaseURL: "https://ashida-shift-default-rtdb.firebaseio.com",
+  projectId: "ashida-shift",
+  storageBucket: "ashida-shift.firebasestorage.app",
+  messagingSenderId: "658962844682",
+  appId: "1:658962844682:web:a48ff4c0184ec38dbc23f3"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
 // ===== CONFIG =====
 const DEFAULT_STAFF = [
   { name: '田中', pin: '1111' },
@@ -1154,18 +1170,7 @@ const DEFAULT_STAFF = [
   { name: '山田', pin: '3333' },
 ];
 
-function loadStaff() {
-  try {
-    const s = localStorage.getItem('ashida_staff');
-    return s ? JSON.parse(s) : DEFAULT_STAFF;
-  } catch { return DEFAULT_STAFF; }
-}
-
-function saveStaff() {
-  localStorage.setItem('ashida_staff', JSON.stringify(STAFF_LIST));
-}
-
-let STAFF_LIST = loadStaff();
+let STAFF_LIST = [];
 
 const ADMIN_PIN = '0000';
 
@@ -1176,16 +1181,17 @@ function getColor(name) {
   return COLORS[h % COLORS.length];
 }
 
-// ===== STORAGE (localStorage) =====
-function loadData() {
-  try {
-    const s = localStorage.getItem('ashida_shifts');
-    return s ? JSON.parse(s) : [];
-  } catch { return []; }
-}
+// ===== STORAGE (Firebase) =====
+let _shiftData = [];
+function loadData() { return _shiftData; }
 
 function saveData(d) {
-  localStorage.setItem('ashida_shifts', JSON.stringify(d));
+  _shiftData = d;
+  set(ref(db, 'shifts'), d.length > 0 ? d : null);
+}
+
+function saveStaff() {
+  set(ref(db, 'staff'), STAFF_LIST.length > 0 ? STAFF_LIST : null);
 }
 
 // ===== SESSION =====
@@ -1784,8 +1790,48 @@ function renderAdmin() {
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', () => {
-  buildStaffGrid();
+  // スタッフデータをリアルタイム監視
+  onValue(ref(db, 'staff'), (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+      STAFF_LIST = Object.values(data);
+    } else {
+      STAFF_LIST = [...DEFAULT_STAFF];
+      saveStaff();
+    }
+    buildStaffGrid();
+    if (currentUser?.role === 'admin') renderStaffList();
+  });
+
+  // シフトデータをリアルタイム監視
+  onValue(ref(db, 'shifts'), (snapshot) => {
+    const data = snapshot.val();
+    _shiftData = data ? Object.values(data) : [];
+    if (currentUser?.role === 'admin') renderAdmin();
+    if (currentUser?.role === 'staff') renderConfirmed(currentUser.name);
+  });
 });
+
+// ===== GLOBAL EXPORTS (for HTML onclick) =====
+window.logout               = logout;
+window.switchMyTab          = switchMyTab;
+window.changeMonth          = changeMonth;
+window.setPeriod            = setPeriod;
+window.bulkSet              = bulkSet;
+window.submitShift          = submitShift;
+window.openPin              = openPin;
+window.closePin             = closePin;
+window.pinInput             = pinInput;
+window.pinDelete            = pinDelete;
+window.setFilter            = setFilter;
+window.updateStatus         = updateStatus;
+window.clearAll             = clearAll;
+window.toggleStaffSection   = toggleStaffSection;
+window.registerStaff        = registerStaff;
+window.deleteStaff          = deleteStaff;
+window.openRegisterOverlay  = openRegisterOverlay;
+window.closeRegisterOverlay = closeRegisterOverlay;
+window.submitRegisterOverlay = submitRegisterOverlay;
 </script>
 </body>
 </html>

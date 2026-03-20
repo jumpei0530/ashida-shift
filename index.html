@@ -1270,16 +1270,30 @@ body {
 .toggle-switch input:checked + .toggle-track { background: var(--tri); }
 .toggle-switch input:checked + .toggle-track::after { transform: translateX(20px); }
 
+.submit-top-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  margin-bottom: 4px;
+}
+.submit-top-half { flex: 1; min-width: 0; }
+.submit-top-half #mp-window-banner,
+.submit-top-half > .window-banner { height: 100%; }
+
 /* 再提出セクション */
 .resubmit-box {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 16px;
+  padding: 12px;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
-.resubmit-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-.resubmit-sub { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
-.resubmit-prev { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+.resubmit-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.resubmit-sub { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
 .resubmit-btn {
   width: 100%; padding: 11px;
   background: none;
@@ -1327,6 +1341,20 @@ body {
   margin-top: 2px;
 }
 .no-applicant { font-size: 12px; color: var(--muted); padding: 8px 12px; }
+
+.time-preset-btn {
+  width: 100%; padding: 9px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: 'Noto Sans JP', sans-serif;
+  cursor: pointer;
+  text-align: left;
+}
+.time-preset-btn:hover { border-color: var(--tri); }
+.time-preset-btn.cancel { color: var(--muted); }
 
 .publish-btn {
   display: block; width: 100%;
@@ -1424,7 +1452,17 @@ body {
 
     <!-- SUBMIT TAB -->
     <div class="mytab-content" id="mytab-submit">
-      <div id="mp-window-banner"></div>
+      <div class="submit-top-row">
+        <div id="mp-window-banner" class="submit-top-half"></div>
+        <!-- 再提出セクション（提出後のみ表示） -->
+        <div id="resubmit-section" class="submit-top-half" style="display:none;">
+          <div class="resubmit-box">
+            <div class="resubmit-title">シフト再提出・変更</div>
+            <div class="resubmit-sub">前回の内容を変更して再提出できます。</div>
+            <button class="resubmit-btn" onclick="startResubmit()">変更して再提出する</button>
+          </div>
+        </div>
+      </div>
 
       <div id="mp-form-body">
         <div class="section">
@@ -1462,16 +1500,6 @@ body {
         </div>
 
         <button class="submit-btn" id="submit-btn" onclick="submitShift()">シフト希望を提出する →</button>
-      </div>
-
-      <!-- 再提出セクション -->
-      <div id="resubmit-section" style="display:none; margin-top:16px;">
-        <div class="resubmit-box">
-          <div class="resubmit-title">シフト再提出・変更</div>
-          <div class="resubmit-sub">提出済みの内容を変更できます。再提出すると前の内容は上書きされます。</div>
-          <div id="resubmit-prev"></div>
-          <button class="resubmit-btn" onclick="startResubmit()">変更して再提出する</button>
-        </div>
       </div>
     </div>
 
@@ -1581,6 +1609,16 @@ body {
       <button class="filter-chip"        id="admin-conf-second" onclick="adminConfirmPeriod('second',this)">後半 16〜末日</button>
     </div>
     <div id="admin-confirm-body"></div>
+    <!-- 時間プリセット選択 -->
+    <div id="admin-time-modal" style="display:none; position:sticky; bottom:60px; background:var(--surface2); border:1px solid var(--tri); border-radius:12px; padding:12px; margin-bottom:8px;">
+      <div style="font-size:12px; color:var(--muted); margin-bottom:8px;" id="admin-time-modal-label"></div>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <button class="time-preset-btn" onclick="selectAdminTime('05:00','LAST')">5時入りラスト</button>
+        <button class="time-preset-btn" onclick="selectAdminTime('18:00','LAST')">18時入りラスト</button>
+        <button class="time-preset-btn" onclick="selectAdminTime('19:00','23:00')">19時入り23時</button>
+        <button class="time-preset-btn cancel" onclick="cancelAdminTime()">キャンセル</button>
+      </div>
+    </div>
     <button class="publish-btn" onclick="publishShifts()">発表する</button>
     <button class="settings-close" onclick="closeAdminConfirm()">閉じる</button>
   </div>
@@ -2226,7 +2264,6 @@ function checkSubmissionWindow() {
     formBody.classList.add('form-locked');
     submitBtn.disabled = true;
   }
-  checkResubmit();
 }
 
 // ===== SUBMIT =====
@@ -2264,6 +2301,8 @@ function submitShift() {
   document.querySelectorAll('.status-btn.selected').forEach(b => b.classList.remove('selected'));
   document.querySelectorAll('.time-picker.visible').forEach(t => t.classList.remove('visible'));
 
+  // 再提出セクションを表示（提出後のみ）
+  document.getElementById('resubmit-section').style.display = 'flex';
   showToast();
   // ホーム（確定シフトタブ）へ自動遷移
   setTimeout(() => switchMyTab('confirmed', document.querySelectorAll('.mypage-tab')[0]), 300);
@@ -2449,6 +2488,9 @@ function closeStaffStatusList(e) {
 let adminConfirmOffset = 0;
 let adminConfirmPeriodVal = 'first';
 let adminConfirmSelections = {}; // { 'YYYY-MM-DD': ['staff1', ...] }
+let adminTimeOverrides = {};     // { 'YYYY-MM-DD::name': {start, end} }
+let pendingTimeDate = null;
+let pendingTimeName = null;
 
 function openAdminConfirm() {
   // 直近の有効期間をデフォルトに（期限切れ含む直近）
@@ -2540,12 +2582,24 @@ function renderAdminConfirm() {
       ? `<div class="no-applicant">申請なし</div>`
       : `<div class="confirm-staff-list">${candidates.map(c => {
           const isSel = selected.includes(c.name);
-          const timeStr = c.status === 'tri'
-            ? (c.start||'').replace(':00','') + '〜' + ((c.end === 'LAST' || c.end === 'ラスト') ? 'LAST' : (c.end||'').replace(':00',''))
-            : '○';
+          const overKey = `${dateStr}::${c.name}`;
+          const ov = adminTimeOverrides[overKey];
+          let timeStr;
+          if (ov) {
+            timeStr = ov.start.replace(':00','') + '〜' + (ov.end === 'LAST' ? 'LAST' : ov.end.replace(':00',''));
+          } else if (c.status === 'tri') {
+            timeStr = (c.start||'').replace(':00','') + '〜' + ((c.end === 'LAST'||c.end === 'ラスト') ? 'LAST' : (c.end||'').replace(':00',''));
+          } else {
+            timeStr = isSel ? '時間未設定 ✏️' : '○';
+          }
+          const clickFn = (c.status === 'ok' && isSel)
+            ? `openAdminTimeModal('${dateStr}','${c.name}')`
+            : (c.status === 'ok' && !isSel)
+              ? `toggleConfirmStaff('${dateStr}','${c.name}')`
+              : `toggleConfirmStaff('${dateStr}','${c.name}')`;
           return `<div class="confirm-staff-chip ${isSel ? 'selected' : ''}"
             data-date="${dateStr}" data-name="${c.name}"
-            onclick="toggleConfirmStaff('${dateStr}','${c.name}')">
+            onclick="${clickFn}">
             ${c.name}<br><span class="confirm-time-label">${timeStr}</span>
           </div>`;
         }).join('')}</div>`;
@@ -2563,6 +2617,33 @@ function renderAdminConfirm() {
     '<p style="color:var(--muted);text-align:center;padding:20px">データがありません</p>';
 }
 
+function openAdminTimeModal(dateStr, staffName) {
+  pendingTimeDate = dateStr;
+  pendingTimeName = staffName;
+  const dt = new Date(dateStr + 'T00:00:00');
+  const label = dt.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
+  document.getElementById('admin-time-modal-label').textContent = `${label} - ${staffName} さんの時間`;
+  document.getElementById('admin-time-modal').style.display = 'block';
+}
+
+function selectAdminTime(start, end) {
+  if (!pendingTimeDate || !pendingTimeName) return;
+  adminTimeOverrides[`${pendingTimeDate}::${pendingTimeName}`] = { start, end };
+  // 選択済みに確実に追加
+  if (!adminConfirmSelections[pendingTimeDate]) adminConfirmSelections[pendingTimeDate] = [];
+  if (!adminConfirmSelections[pendingTimeDate].includes(pendingTimeName)) {
+    adminConfirmSelections[pendingTimeDate].push(pendingTimeName);
+  }
+  cancelAdminTime();
+  renderAdminConfirm();
+}
+
+function cancelAdminTime() {
+  pendingTimeDate = null;
+  pendingTimeName = null;
+  document.getElementById('admin-time-modal').style.display = 'none';
+}
+
 function publishShifts() {
   if (!confirm('選択した内容で発表しますか？\n全スタッフの確定シフトが更新されます。')) return;
 
@@ -2574,13 +2655,13 @@ function publishShifts() {
   Object.entries(adminConfirmSelections).forEach(([date, names]) => {
     if (!names || names.length === 0) return;
     publishObj[date] = names.map(name => {
+      // 管理者が手動設定した時間を優先
+      const ov = adminTimeOverrides[`${date}::${name}`];
+      if (ov) return { name, start: ov.start, end: ov.end };
+      // 申請データから取得
       const sub = allData.find(d => d.name === name);
       const dayEntry = sub?.days.find(d => d.date === date);
-      return {
-        name,
-        start: dayEntry?.start || '',
-        end:   dayEntry?.end   || '',
-      };
+      return { name, start: dayEntry?.start || '', end: dayEntry?.end || '' };
     });
   });
 
@@ -2784,7 +2865,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const data = snapshot.val();
     _shiftData = data ? Object.values(data) : [];
     if (currentUser?.role === 'admin') renderAdmin();
-    if (currentUser?.role === 'staff') { renderConfirmed(currentUser.name); checkResubmit(); }
+    if (currentUser?.role === 'staff') renderConfirmed(currentUser.name);
   });
 
   // 発表済みシフトをリアルタイム監視
@@ -2817,6 +2898,9 @@ window.closeAdminConfirm    = closeAdminConfirm;
 window.adminConfirmMonth    = adminConfirmMonth;
 window.adminConfirmPeriod   = adminConfirmPeriod;
 window.toggleConfirmStaff   = toggleConfirmStaff;
+window.openAdminTimeModal   = openAdminTimeModal;
+window.selectAdminTime      = selectAdminTime;
+window.cancelAdminTime      = cancelAdminTime;
 window.publishShifts        = publishShifts;
 window.openAdminCalendar    = openAdminCalendar;
 window.closeAdminCalendar   = closeAdminCalendar;

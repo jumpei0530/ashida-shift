@@ -384,19 +384,18 @@ body {
   font-size: 17px;
   font-weight: 700;
   line-height: 1;
+  margin-top: auto;
+  color: rgba(255,255,255,0.5);
 }
 
-.cal-mark.ok  { color: var(--ok); }
-.cal-mark.tri { color: var(--tri); }
-.cal-mark.ng  { color: var(--ng); }
-
 .cal-time {
-  font-size: 8px;
-  color: var(--tri);
+  font-size: 9px;
+  color: rgba(255,255,255,0.5);
   text-align: center;
   line-height: 1.3;
-  margin-top: 2px;
+  margin-top: auto;
   white-space: nowrap;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .empty-state {
@@ -1433,11 +1432,12 @@ function renderConfirmed(name) {
     let inner = `<div class="cal-date">${d}</div>`;
     if (shift) {
       cellCls += ` has-shift shift-${shift.status}`;
-      const mark = shift.status === 'ok' ? '○' : shift.status === 'tri' ? '△' : '×';
-      inner += `<div class="cal-mark ${shift.status}">${mark}</div>`;
       if (shift.status === 'tri') {
         const s = shift.start.replace(':00',''); const e = shift.end.replace(':00','');
         inner += `<div class="cal-time">${s}〜${e}</div>`;
+      } else {
+        const mark = shift.status === 'ok' ? '○' : '×';
+        inner += `<div class="cal-mark">${mark}</div>`;
       }
     }
     html += `<div class="${cellCls}">${inner}</div>`;

@@ -375,7 +375,8 @@ body {
   margin-bottom: 3px;
 }
 
-.cal-cell.sun .cal-date { color: rgba(232,75,75,0.7); }
+.cal-cell.sun .cal-date,
+.cal-cell.holiday .cal-date { color: rgba(232,75,75,0.7); }
 .cal-cell.sat .cal-date { color: rgba(75,159,232,0.7); }
 .cal-cell.has-shift .cal-date { color: inherit; opacity: 0.7; }
 
@@ -1372,6 +1373,16 @@ function switchMyTab(tab, btn) {
   if (tab === 'confirmed') renderConfirmed(currentUser.name);
 }
 
+// ===== HOLIDAYS =====
+let holidayMap = {};
+
+async function loadHolidays() {
+  try {
+    const res = await fetch('https://holidays-jp.github.io/api/v1/date.json');
+    holidayMap = await res.json();
+  } catch { holidayMap = {}; }
+}
+
 // ===== CONFIRMED SHIFTS (カレンダー) =====
 let confirmedMonthOffset = 0;
 
@@ -1417,6 +1428,7 @@ function renderConfirmed(name) {
     let cellCls = 'cal-cell';
     if (dow === 0) cellCls += ' sun';
     if (dow === 6) cellCls += ' sat';
+    if (holidayMap[dateStr]) cellCls += ' holiday';
 
     let inner = `<div class="cal-date">${d}</div>`;
     if (shift) {
@@ -1875,6 +1887,8 @@ function renderAdmin() {
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', () => {
+  loadHolidays();
+
   // スタッフデータをリアルタイム監視
   onValue(ref(db, 'staff'), (snapshot) => {
     const data = snapshot.val();

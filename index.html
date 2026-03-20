@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>芦田商店 シフト</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+:root {
+  --bg: #0e0e0e;
+  --surface: #181818;
+  --surface2: #222;
+  --border: #2e2e2e;
+  --text: #f0ede8;
+  --muted: #777;
+  --radius: 12px;
+  --ok:    #4be8a0;  --ok-bg:  rgba(75,232,160,0.1);
+  --tri:   #e8b84b;  --tri-bg: rgba(232,184,75,0.1);
+  --ng:    #e84b4b;  --ng-bg:  rgba(232,75,75,0.08);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-weight: 300;
+  min-height: 100vh;
+}
+
+/* ===== SCREENS ===== */
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: block; }
+
+/* ===== TOP NAV ===== */
+.topnav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0;
+  background: rgba(14,14,14,0.96);
+  backdrop-filter: blur(12px);
+  z-index: 100;
+}
+
+.topnav-logo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tri);
+}
+
+.topnav-logo span { color: rgba(255,255,255,0.2); margin: 0 4px; }
+
+.topnav-right { display: flex; align-items: center; gap: 10px; }
+
+.topnav-user {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.logout-btn {
+  font-size: 11px;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  transition: all 0.15s;
+}
+
+.logout-btn:hover { border-color: var(--ng); color: var(--ng); }
+
+/* ===== LOGIN SCREEN ===== */
+.login-wrap {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 60px 24px 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.login-logo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.login-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.login-title span { color: var(--tri); }
+
+/* Staff grid */
+.staff-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.staff-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.staff-card:hover { border-color: var(--tri); transform: translateY(-1px); }
+.staff-card.selected { border-color: var(--tri); background: var(--tri-bg); }
+
+.sc-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  margin: 0 auto 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700;
+}
+
+.sc-name { font-size: 13px; font-weight: 500; }
+
+/* Admin link */
+.admin-link {
+  margin-top: 32px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.admin-link:hover { color: var(--text); }
+
+/* ===== PIN PAD ===== */
+.pin-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(8px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+}
+
+.pin-overlay.visible { display: flex; }
+
+.pin-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px 28px;
+  width: 320px;
+  max-width: calc(100vw - 40px);
+}
+
+.pin-title {
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.pin-sub {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.pin-dots {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.pin-dot {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  transition: all 0.15s;
+}
+
+.pin-dot.filled { background: var(--tri); border-color: var(--tri); }
+.pin-dot.error  { background: var(--ng);  border-color: var(--ng); }
+
+.pin-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.pin-key {
+  height: 52px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.1s;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.pin-key:active { transform: scale(0.93); background: var(--border); }
+.pin-key.del { font-size: 14px; color: var(--muted); }
+.pin-key.empty { border: none; background: none; cursor: default; }
+
+.pin-cancel {
+  margin-top: 12px;
+  width: 100%;
+  padding: 10px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+}
+
+.pin-error-msg {
+  text-align: center;
+  font-size: 12px;
+  color: var(--ng);
+  height: 16px;
+  margin-top: -16px;
+  margin-bottom: 8px;
+}
+
+/* ===== MY PAGE ===== */
+.mypage-wrap {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 24px 20px 80px;
+}
+
+/* Profile header */
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+}
+
+.profile-avatar {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 700;
+  flex-shrink: 0;
+}
+
+.profile-name { font-size: 18px; font-weight: 700; }
+.profile-sub  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+/* Tabs */
+.mypage-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--surface2);
+  border-radius: 8px;
+  padding: 3px;
+  margin-bottom: 16px;
+}
+
+.mypage-tab {
+  flex: 1;
+  padding: 9px;
+  border-radius: 6px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mypage-tab.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+
+.mytab-content { display: none; }
+.mytab-content.active { display: block; }
+
+/* ===== CONFIRMED SHIFTS VIEW ===== */
+.confirmed-month {
+  margin-bottom: 20px;
+}
+
+.cm-header {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.conf-row {
+  display: grid;
+  grid-template-columns: 96px 28px 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(46,46,46,0.5);
+  font-size: 13px;
+}
+
+.conf-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.conf-mark {
+  width: 24px; height: 24px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+}
+
+.conf-mark.ok  { background: var(--ok-bg);  color: var(--ok); }
+.conf-mark.tri { background: var(--tri-bg); color: var(--tri); }
+.conf-mark.ng  { background: var(--ng-bg);  color: var(--ng); }
+
+.conf-detail { font-size: 12px; color: var(--muted); }
+
+.empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--muted);
+}
+
+.empty-state .ei { font-size: 32px; margin-bottom: 10px; }
+.empty-state p   { font-size: 13px; }
+
+/* ===== SHARED FORM STYLES ===== */
+.section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 12px;
+}
+
+.section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.legend {
+  display: flex; gap: 14px; margin-bottom: 12px; flex-wrap: wrap;
+}
+
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+
+.legend-badge {
+  width: 24px; height: 24px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+}
+
+.lb-ok  { background: var(--ok-bg);  color: var(--ok); }
+.lb-tri { background: var(--tri-bg); color: var(--tri); }
+.lb-ng  { background: var(--ng-bg);  color: var(--ng); }
+
+/* Bulk buttons */
+.bulk-btns { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+
+.bulk-btn {
+  flex: 1; min-width: 60px;
+  padding: 9px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: none; color: var(--muted);
+}
+
+.bulk-ok  { border-color: var(--ok);  color: var(--ok);  background: var(--ok-bg); }
+.bulk-tri { border-color: var(--tri); color: var(--tri); background: var(--tri-bg); }
+.bulk-ng  { border-color: var(--ng);  color: var(--ng);  background: var(--ng-bg); }
+.bulk-clr:hover { border-color: var(--text); color: var(--text); }
+.bulk-btn:active { transform: scale(0.97); }
+
+/* Period selector */
+.period-selector {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+}
+
+.period-btn {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: none; color: var(--muted);
+  font-size: 18px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; flex-shrink: 0; line-height: 1;
+}
+
+.period-btn:hover { border-color: var(--tri); color: var(--tri); }
+
+.period-center {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; gap: 8px;
+}
+
+.period-month {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; color: var(--text); letter-spacing: 0.05em;
+}
+
+.period-tabs {
+  display: flex; gap: 4px;
+  background: var(--surface2);
+  border-radius: 8px; padding: 3px; width: 100%;
+}
+
+.period-tab {
+  flex: 1; padding: 7px 8px;
+  border-radius: 6px; border: none; background: none;
+  color: var(--muted);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 11px; cursor: pointer;
+  transition: all 0.15s; white-space: nowrap;
+}
+
+.period-tab.active {
+  background: var(--surface);
+  color: var(--tri);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+
+/* Day rows */
+.day-rows { display: flex; flex-direction: column; gap: 6px; }
+
+.day-row {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 8px; align-items: start; min-height: 44px;
+}
+
+.day-label-wrap { display: flex; align-items: center; height: 44px; }
+
+.day-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--muted);
+}
+
+.day-label .wd { font-size: 10px; display: block; margin-top: 1px; }
+.day-label .wd.sat { color: #4b9fe8; }
+.day-label .wd.sun { color: var(--ng); }
+
+.day-controls { display: flex; flex-direction: column; gap: 6px; }
+
+.status-btns { display: flex; gap: 6px; align-items: center; }
+
+.status-btn {
+  flex: 1; height: 44px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: none;
+  font-size: 16px; font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.status-btn[data-status="ok"].selected  { background: var(--ok-bg);  border-color: var(--ok);  color: var(--ok); }
+.status-btn[data-status="tri"].selected { background: var(--tri-bg); border-color: var(--tri); color: var(--tri); }
+.status-btn[data-status="ng"].selected  { background: var(--ng-bg);  border-color: var(--ng);  color: var(--ng); }
+
+.time-picker {
+  display: none;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  flex-direction: column; gap: 8px;
+}
+
+.time-picker.visible { display: flex; }
+
+.time-picker-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+
+.time-range-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px; align-items: center;
+}
+
+.time-select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none; cursor: pointer;
+  -webkit-appearance: none; width: 100%;
+  transition: border-color 0.15s;
+}
+
+.time-select:focus { border-color: var(--tri); }
+.time-arrow { color: var(--muted); font-size: 14px; text-align: center; }
+
+.form-textarea {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 14px;
+  padding: 12px 14px;
+  resize: none; height: 72px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.form-textarea:focus { border-color: var(--tri); }
+
+.submit-btn {
+  width: 100%; padding: 16px;
+  background: var(--tri);
+  color: #0e0e0e;
+  border: none;
+  border-radius: var(--radius);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 15px; font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.05em;
+}
+
+.submit-btn:hover { background: #f0c84f; transform: translateY(-1px); }
+.submit-btn:active { transform: translateY(0); }
+.submit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+/* Window banner */
+.window-banner {
+  border-radius: 10px; padding: 12px 16px;
+  margin-bottom: 12px;
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 13px; line-height: 1.7;
+}
+
+.window-banner.open   { background: var(--ok-bg);  border: 1px solid rgba(75,232,160,0.25); color: var(--ok); }
+.window-banner.closed { background: var(--ng-bg);  border: 1px solid rgba(232,75,75,0.2);   color: var(--ng); }
+.window-banner.soon   { background: var(--tri-bg); border: 1px solid rgba(232,184,75,0.2);  color: var(--tri); }
+
+.wb-icon { font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+.wb-body strong { font-weight: 700; display: block; }
+
+.form-locked { opacity: 0.35; pointer-events: none; user-select: none; }
+
+/* ===== ADMIN SCREEN ===== */
+.admin-wrap {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px 20px 80px;
+}
+
+.admin-top {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px; flex-wrap: wrap; gap: 10px;
+}
+
+.admin-top h1 { font-size: 20px; font-weight: 700; }
+
+.clear-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: none; color: var(--muted);
+  font-size: 12px; cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  transition: all 0.15s;
+}
+
+.clear-btn:hover { border-color: var(--ng); color: var(--ng); }
+
+.stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px; }
+
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px; text-align: center;
+}
+
+.stat-n {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 28px; font-weight: 600; line-height: 1; margin-bottom: 4px;
+}
+
+.stat-l { font-size: 11px; color: var(--muted); }
+
+.filters { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+
+.filter-chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  font-size: 12px; cursor: pointer;
+  background: none; color: var(--muted);
+  font-family: 'Noto Sans JP', sans-serif;
+  transition: all 0.15s;
+}
+
+.filter-chip.active { border-color: var(--tri); color: var(--tri); background: var(--tri-bg); }
+
+.cards { display: flex; flex-direction: column; gap: 10px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.card-head {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.card-person { display: flex; align-items: center; gap: 10px; }
+
+.ca-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; flex-shrink: 0;
+}
+
+.person-name { font-size: 14px; font-weight: 500; }
+.person-time { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 1px; }
+
+.s-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; padding: 3px 9px;
+  border-radius: 4px; letter-spacing: 0.1em;
+}
+
+.s-pending   { background: rgba(232,184,75,0.12); color: var(--tri); }
+.s-confirmed { background: rgba(75,232,160,0.12); color: var(--ok); }
+.s-declined  { background: rgba(232,75,75,0.1);   color: var(--ng); }
+
+.card-body { padding: 14px 18px; }
+
+.day-summary { display: flex; flex-direction: column; gap: 5px; margin-bottom: 8px; }
+
+.ds-row {
+  display: grid;
+  grid-template-columns: 96px 28px 1fr;
+  gap: 8px; align-items: center; font-size: 12px;
+}
+
+.ds-date { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); }
+
+.ds-mark {
+  width: 24px; height: 24px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+}
+
+.ds-mark.ok  { background: var(--ok-bg);  color: var(--ok); }
+.ds-mark.tri { background: var(--tri-bg); color: var(--tri); }
+.ds-mark.ng  { background: var(--ng-bg);  color: var(--ng); }
+
+.ds-detail { font-size: 12px; color: var(--muted); }
+
+.card-note {
+  background: var(--surface2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px; color: var(--muted); margin-top: 6px;
+}
+
+.card-actions {
+  display: flex; gap: 6px;
+  padding: 10px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.act-btn {
+  flex: 1; padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 12px; cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  transition: all 0.15s;
+  background: none; color: var(--muted);
+}
+
+.act-btn.ok:hover  { border-color: var(--ok);  color: var(--ok);  background: var(--ok-bg); }
+.act-btn.ng:hover  { border-color: var(--ng);  color: var(--ng);  background: var(--ng-bg); }
+.act-btn.rst:hover { border-color: var(--tri); color: var(--tri); }
+
+.empty { text-align: center; padding: 48px 20px; color: var(--muted); }
+.empty .ei { font-size: 32px; margin-bottom: 10px; }
+.empty p { font-size: 13px; }
+
+/* TOAST */
+.toast {
+  position: fixed;
+  bottom: 32px; left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--ok); color: #0e0e0e;
+  padding: 14px 28px;
+  border-radius: 40px;
+  font-size: 14px; font-weight: 700;
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  z-index: 200; white-space: nowrap;
+}
+
+.toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN SCREEN ===== -->
+<div class="screen active" id="screen-login">
+  <div class="login-wrap">
+    <div class="login-logo">Ashida Shoten</div>
+    <div class="login-title">芦田商店<br><span>シフト管理</span></div>
+
+    <div style="width:100%; margin-bottom:8px;">
+      <div style="font-size:12px; color:var(--muted); margin-bottom:12px; text-align:center;">スタッフを選んでください</div>
+      <div class="staff-grid" id="staff-grid"></div>
+    </div>
+
+    <div class="admin-link" onclick="openPin('admin')">管理者としてログイン</div>
+  </div>
+</div>
+
+<!-- ===== MY PAGE SCREEN ===== -->
+<div class="screen" id="screen-mypage">
+  <div class="topnav">
+    <div class="topnav-logo">芦田商店<span>/</span>シフト</div>
+    <div class="topnav-right">
+      <span class="topnav-user" id="topnav-username"></span>
+      <button class="logout-btn" onclick="logout()">ログアウト</button>
+    </div>
+  </div>
+
+  <div class="mypage-wrap">
+    <div class="profile-header">
+      <div class="profile-avatar" id="profile-avatar"></div>
+      <div>
+        <div class="profile-name" id="profile-name"></div>
+        <div class="profile-sub">芦田商店 スタッフ</div>
+      </div>
+    </div>
+
+    <div class="mypage-tabs">
+      <button class="mypage-tab active" onclick="switchMyTab('submit', this)">シフト提出</button>
+      <button class="mypage-tab" onclick="switchMyTab('confirmed', this)">確定シフト</button>
+    </div>
+
+    <!-- SUBMIT TAB -->
+    <div class="mytab-content active" id="mytab-submit">
+      <div id="mp-window-banner"></div>
+
+      <div id="mp-form-body">
+        <div class="section">
+          <div class="legend">
+            <div class="legend-item"><div class="legend-badge lb-ok">○</div>出勤可</div>
+            <div class="legend-item"><div class="legend-badge lb-tri">△</div>時間指定</div>
+            <div class="legend-item"><div class="legend-badge lb-ng">×</div>出勤不可</div>
+          </div>
+
+          <div class="bulk-btns">
+            <button class="bulk-btn bulk-ok"  onclick="bulkSet('ok')">全部 ○</button>
+            <button class="bulk-btn bulk-tri" onclick="bulkSet('tri')">全部 △</button>
+            <button class="bulk-btn bulk-ng"  onclick="bulkSet('ng')">全部 ×</button>
+            <button class="bulk-btn bulk-clr" onclick="bulkSet('clear')">リセット</button>
+          </div>
+
+          <div class="period-selector">
+            <button class="period-btn" onclick="changeMonth(-1)">‹</button>
+            <div class="period-center">
+              <div class="period-month" id="period-month">—</div>
+              <div class="period-tabs">
+                <button class="period-tab active" id="tab-first"  onclick="setPeriod('first')">前半 1〜15日</button>
+                <button class="period-tab"        id="tab-second" onclick="setPeriod('second')">後半 16〜末日</button>
+              </div>
+            </div>
+            <button class="period-btn" onclick="changeMonth(1)">›</button>
+          </div>
+
+          <div class="day-rows" id="day-rows"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-label">備考・連絡事項</div>
+          <textarea class="form-textarea" id="staff-note" placeholder="例：〇日は早退希望など"></textarea>
+        </div>
+
+        <button class="submit-btn" id="submit-btn" onclick="submitShift()">シフト希望を提出する →</button>
+      </div>
+    </div>
+
+    <!-- CONFIRMED TAB -->
+    <div class="mytab-content" id="mytab-confirmed">
+      <div id="confirmed-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADMIN SCREEN ===== -->
+<div class="screen" id="screen-admin">
+  <div class="topnav">
+    <div class="topnav-logo">芦田商店<span>/</span>管理</div>
+    <div class="topnav-right">
+      <button class="logout-btn" onclick="logout()">ログアウト</button>
+    </div>
+  </div>
+
+  <div class="admin-wrap">
+    <div class="admin-top">
+      <h1>シフト管理</h1>
+      <button class="clear-btn" onclick="clearAll()">全削除</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="stat-n" id="s-total"     style="color:var(--text)">0</div><div class="stat-l">合計</div></div>
+      <div class="stat"><div class="stat-n" id="s-pending"   style="color:var(--tri)">0</div><div class="stat-l">未確認</div></div>
+      <div class="stat"><div class="stat-n" id="s-confirmed" style="color:var(--ok)">0</div><div class="stat-l">確定</div></div>
+    </div>
+
+    <div class="filters">
+      <button class="filter-chip active" onclick="setFilter('all',this)">すべて</button>
+      <button class="filter-chip" onclick="setFilter('pending',this)">未確認</button>
+      <button class="filter-chip" onclick="setFilter('confirmed',this)">確定</button>
+      <button class="filter-chip" onclick="setFilter('declined',this)">却下</button>
+    </div>
+
+    <div class="cards" id="admin-cards"></div>
+  </div>
+</div>
+
+<!-- PIN OVERLAY -->
+<div class="pin-overlay" id="pin-overlay">
+  <div class="pin-box">
+    <div class="pin-title" id="pin-title">PIN を入力</div>
+    <div class="pin-sub"  id="pin-sub">4桁のPINを入力してください</div>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot"></div><div class="pin-dot"></div>
+      <div class="pin-dot"></div><div class="pin-dot"></div>
+    </div>
+    <div class="pin-error-msg" id="pin-error"></div>
+    <div class="pin-grid">
+      <button class="pin-key" onclick="pinInput('1')">1</button>
+      <button class="pin-key" onclick="pinInput('2')">2</button>
+      <button class="pin-key" onclick="pinInput('3')">3</button>
+      <button class="pin-key" onclick="pinInput('4')">4</button>
+      <button class="pin-key" onclick="pinInput('5')">5</button>
+      <button class="pin-key" onclick="pinInput('6')">6</button>
+      <button class="pin-key" onclick="pinInput('7')">7</button>
+      <button class="pin-key" onclick="pinInput('8')">8</button>
+      <button class="pin-key" onclick="pinInput('9')">9</button>
+      <button class="pin-key empty"></button>
+      <button class="pin-key" onclick="pinInput('0')">0</button>
+      <button class="pin-key del" onclick="pinDelete()">⌫</button>
+    </div>
+    <button class="pin-cancel" onclick="closePin()">キャンセル</button>
+  </div>
+</div>
+
+<div class="toast" id="toast">✓ 提出が完了しました！</div>
+
+<script>
+// ===== CONFIG =====
+const STAFF_LIST = [
+  { name: '田中', pin: '1111' },
+  { name: '佐藤', pin: '2222' },
+  { name: '山田', pin: '3333' },
+  { name: '鈴木', pin: '4444' },
+  { name: '伊藤', pin: '5555' },
+  { name: '渡辺', pin: '6666' },
+];
+
+const ADMIN_PIN = '0000';
+
+const COLORS = ['#e8b84b','#4be8a0','#4b9fe8','#e84b9f','#9f4be8','#e87c4b'];
+
+function getColor(name) {
+  let h = 0; for (const c of name) h += c.charCodeAt(0);
+  return COLORS[h % COLORS.length];
+}
+
+// ===== STORAGE (in-memory) =====
+let _shiftData = [];
+const loadData = () => _shiftData;
+const saveData = d => { _shiftData = d; };
+
+// ===== SESSION =====
+let currentUser = null; // { name, role: 'staff'|'admin' }
+
+function logout() {
+  currentUser = null;
+  showScreen('login');
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+
+// ===== LOGIN SCREEN =====
+function buildStaffGrid() {
+  const grid = document.getElementById('staff-grid');
+  grid.innerHTML = '';
+  STAFF_LIST.forEach(s => {
+    const color = getColor(s.name);
+    const card = document.createElement('div');
+    card.className = 'staff-card';
+    card.innerHTML = `
+      <div class="sc-avatar" style="background:${color}22;color:${color}">${s.name[0]}</div>
+      <div class="sc-name">${s.name}</div>`;
+    card.onclick = () => openPin('staff', s.name);
+    grid.appendChild(card);
+  });
+}
+
+// ===== PIN =====
+let pinBuffer = '';
+let pinTarget = null; // { role, name? }
+
+function openPin(role, name) {
+  pinTarget = { role, name };
+  pinBuffer = '';
+  updatePinDots();
+  document.getElementById('pin-error').textContent = '';
+  document.getElementById('pin-title').textContent =
+    role === 'admin' ? '管理者 PIN' : `${name} さんのPIN`;
+  document.getElementById('pin-sub').textContent = '4桁のPINを入力してください';
+  document.getElementById('pin-overlay').classList.add('visible');
+}
+
+function closePin() {
+  document.getElementById('pin-overlay').classList.remove('visible');
+  pinBuffer = '';
+  pinTarget = null;
+}
+
+function pinInput(digit) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += digit;
+  updatePinDots();
+  if (pinBuffer.length === 4) setTimeout(verifyPin, 120);
+}
+
+function pinDelete() {
+  pinBuffer = pinBuffer.slice(0, -1);
+  updatePinDots();
+}
+
+function updatePinDots(state) {
+  const dots = document.querySelectorAll('.pin-dot');
+  dots.forEach((dot, i) => {
+    dot.classList.toggle('filled', i < pinBuffer.length);
+    dot.classList.toggle('error', state === 'error');
+  });
+}
+
+function verifyPin() {
+  let correct = false;
+  if (pinTarget.role === 'admin') {
+    correct = pinBuffer === ADMIN_PIN;
+  } else {
+    const staff = STAFF_LIST.find(s => s.name === pinTarget.name);
+    correct = staff && pinBuffer === staff.pin;
+  }
+
+  if (correct) {
+    currentUser = { name: pinTarget.name || '管理者', role: pinTarget.role };
+    closePin();
+    if (pinTarget.role === 'admin') {
+      showScreen('admin');
+      renderAdmin();
+    } else {
+      enterMyPage(pinTarget.name);
+    }
+  } else {
+    updatePinDots('error');
+    document.getElementById('pin-error').textContent = 'PINが違います';
+    setTimeout(() => {
+      pinBuffer = '';
+      updatePinDots();
+      document.getElementById('pin-error').textContent = '';
+    }, 900);
+  }
+}
+
+// ===== MY PAGE =====
+function enterMyPage(name) {
+  const color = getColor(name);
+  document.getElementById('topnav-username').textContent = name;
+  document.getElementById('profile-name').textContent = name;
+  document.getElementById('profile-avatar').textContent = name[0];
+  document.getElementById('profile-avatar').style.cssText =
+    `background:${color}22; color:${color}`;
+
+  monthOffset = 0;
+  currentPeriod = 'first';
+  document.getElementById('tab-first').classList.add('active');
+  document.getElementById('tab-second').classList.remove('active');
+
+  renderDays();
+  checkSubmissionWindow();
+  renderConfirmed(name);
+  showScreen('mypage');
+
+  // Reset to submit tab
+  switchMyTab('submit', document.querySelector('.mypage-tab'));
+}
+
+function switchMyTab(tab, btn) {
+  document.querySelectorAll('.mypage-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.mytab-content').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('mytab-' + tab).classList.add('active');
+  if (tab === 'confirmed') renderConfirmed(currentUser.name);
+}
+
+// ===== CONFIRMED SHIFTS =====
+function renderConfirmed(name) {
+  const all = loadData().filter(d => d.name === name && d.status === 'confirmed');
+  const list = document.getElementById('confirmed-list');
+
+  if (all.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="ei">📅</div><p>確定されたシフトはまだありません</p></div>`;
+    return;
+  }
+
+  // Group by year-month
+  const grouped = {};
+  all.forEach(item => {
+    item.days.forEach(d => {
+      const ym = d.date.slice(0, 7);
+      if (!grouped[ym]) grouped[ym] = [];
+      grouped[ym].push({ ...d, submittedAt: item.submittedAt });
+    });
+  });
+
+  const markClass = { ok:'ok', tri:'tri', ng:'ng' };
+  const markLabel = { ok:'○', tri:'△', ng:'×' };
+
+  let html = '';
+  Object.keys(grouped).sort().reverse().forEach(ym => {
+    const [y, m] = ym.split('-');
+    const rows = grouped[ym]
+      .filter(d => d.status !== 'ng')
+      .sort((a,b) => a.date.localeCompare(b.date));
+
+    if (rows.length === 0) return;
+
+    html += `<div class="confirmed-month">
+      <div class="cm-header">${y}年 ${parseInt(m)}月</div>`;
+
+    rows.forEach(d => {
+      const dateObj = new Date(d.date + 'T00:00:00');
+      const dStr = dateObj.toLocaleDateString('ja-JP', { month:'short', day:'numeric', weekday:'short' });
+      const mc = markClass[d.status];
+      const ml = markLabel[d.status];
+      const detail = d.status === 'tri' ? `${d.start} 〜 ${d.end}` : '時間制限なし';
+      html += `<div class="conf-row">
+        <div class="conf-date">${dStr}</div>
+        <div class="conf-mark ${mc}">${ml}</div>
+        <div class="conf-detail">${detail}</div>
+      </div>`;
+    });
+
+    html += `</div>`;
+  });
+
+  list.innerHTML = html || `<div class="empty-state"><div class="ei">📅</div><p>確定された出勤日はありません</p></div>`;
+}
+
+// ===== PERIOD / DAYS =====
+const WD = ['日','月','火','水','木','金','土'];
+let monthOffset = 0;
+let currentPeriod = 'first';
+
+function getMonthYear(offset) {
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+  return { year: d.getFullYear(), month: d.getMonth() };
+}
+
+function getPeriodDates(offset, period) {
+  const { year, month } = getMonthYear(offset);
+  const dates = [];
+  if (period === 'first') {
+    for (let d = 1; d <= 15; d++) dates.push(new Date(year, month, d));
+  } else {
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    for (let d = 16; d <= lastDay; d++) dates.push(new Date(year, month, d));
+  }
+  return dates;
+}
+
+function changeMonth(dir) { monthOffset += dir; renderDays(); checkSubmissionWindow(); }
+
+function setPeriod(period) {
+  currentPeriod = period;
+  document.getElementById('tab-first').classList.toggle('active', period === 'first');
+  document.getElementById('tab-second').classList.toggle('active', period === 'second');
+  renderDays();
+  checkSubmissionWindow();
+}
+
+function timeOptions() {
+  const opts = [];
+  for (let h = 11; h <= 23; h++) {
+    opts.push(`${String(h).padStart(2,'0')}:00`);
+    if (h < 23) opts.push(`${String(h).padStart(2,'0')}:30`);
+  }
+  return opts;
+}
+
+function makeTimeSelect(defaultVal) {
+  const opts = timeOptions();
+  const sel = document.createElement('select');
+  sel.className = 'time-select';
+  opts.forEach(t => {
+    const o = document.createElement('option');
+    o.value = t; o.textContent = t;
+    if (t === defaultVal) o.selected = true;
+    sel.appendChild(o);
+  });
+  return sel;
+}
+
+function renderDays() {
+  const { year, month } = getMonthYear(monthOffset);
+  document.getElementById('period-month').textContent = `${year}年 ${month + 1}月`;
+
+  const dates = getPeriodDates(monthOffset, currentPeriod);
+  const container = document.getElementById('day-rows');
+  container.innerHTML = '';
+
+  dates.forEach(date => {
+    const mm = String(date.getMonth()+1).padStart(2,'0');
+    const dd = String(date.getDate()).padStart(2,'0');
+    const dateStr = `${date.getFullYear()}-${mm}-${dd}`;
+    const wdIdx = date.getDay();
+    const wdClass = wdIdx === 0 ? 'sun' : wdIdx === 6 ? 'sat' : '';
+
+    const row = document.createElement('div');
+    row.className = 'day-row';
+    row.dataset.date = dateStr;
+
+    const labelWrap = document.createElement('div');
+    labelWrap.className = 'day-label-wrap';
+    labelWrap.innerHTML = `<div class="day-label">${mm}/${dd}<span class="wd ${wdClass}">${WD[wdIdx]}</span></div>`;
+
+    const controls = document.createElement('div');
+    controls.className = 'day-controls';
+
+    const btnWrap = document.createElement('div');
+    btnWrap.className = 'status-btns';
+
+    ['ok','tri','ng'].forEach(status => {
+      const btn = document.createElement('button');
+      btn.className = 'status-btn';
+      btn.dataset.status = status;
+      btn.dataset.date = dateStr;
+      btn.textContent = status === 'ok' ? '○' : status === 'tri' ? '△' : '×';
+      btn.addEventListener('click', () => handleStatusClick(btn, dateStr, status));
+      btnWrap.appendChild(btn);
+    });
+
+    const timePicker = document.createElement('div');
+    timePicker.className = 'time-picker';
+    timePicker.id = `tp-${dateStr}`;
+    timePicker.innerHTML = `<div class="time-picker-label">出勤可能な時間帯</div>`;
+
+    const rangeRow = document.createElement('div');
+    rangeRow.className = 'time-range-row';
+    const startSel = makeTimeSelect('17:00'); startSel.id = `ts-${dateStr}`;
+    const arrow = document.createElement('div'); arrow.className = 'time-arrow'; arrow.textContent = '〜';
+    const endSel = makeTimeSelect('23:00');   endSel.id = `te-${dateStr}`;
+    rangeRow.appendChild(startSel); rangeRow.appendChild(arrow); rangeRow.appendChild(endSel);
+    timePicker.appendChild(rangeRow);
+
+    controls.appendChild(btnWrap);
+    controls.appendChild(timePicker);
+    row.appendChild(labelWrap);
+    row.appendChild(controls);
+    container.appendChild(row);
+  });
+}
+
+function handleStatusClick(btn, dateStr, status) {
+  const wasSelected = btn.classList.contains('selected');
+  document.querySelectorAll(`.status-btn[data-date="${dateStr}"]`).forEach(b => b.classList.remove('selected'));
+  const tp = document.getElementById(`tp-${dateStr}`);
+  if (!wasSelected) {
+    btn.classList.add('selected');
+    if (status === 'tri' && tp) tp.classList.add('visible');
+    else if (tp) tp.classList.remove('visible');
+  } else {
+    if (tp) tp.classList.remove('visible');
+  }
+}
+
+function bulkSet(status) {
+  document.querySelectorAll('.day-row').forEach(row => {
+    const dateStr = row.dataset.date;
+    document.querySelectorAll(`.status-btn[data-date="${dateStr}"]`).forEach(b => b.classList.remove('selected'));
+    const tp = document.getElementById(`tp-${dateStr}`);
+    if (tp) tp.classList.remove('visible');
+    if (status !== 'clear') {
+      const btn = row.querySelector(`.status-btn[data-status="${status}"]`);
+      if (btn) {
+        btn.classList.add('selected');
+        if (status === 'tri' && tp) tp.classList.add('visible');
+      }
+    }
+  });
+}
+
+// ===== SUBMISSION WINDOW =====
+function getSubmissionWindow(period, year, month) {
+  if (period === 'first') {
+    const prevMonth = month === 0 ? 11 : month - 1;
+    const prevYear  = month === 0 ? year - 1 : year;
+    return {
+      start: new Date(prevYear, prevMonth, 23, 0, 0, 0),
+      end:   new Date(prevYear, prevMonth, 25, 23, 59, 59),
+      label: `${year}年${month+1}月 前半`,
+      windowLabel: `${prevYear}年${prevMonth+1}月23〜25日`
+    };
+  } else {
+    return {
+      start: new Date(year, month, 8, 0, 0, 0),
+      end:   new Date(year, month, 10, 23, 59, 59),
+      label: `${year}年${month+1}月 後半`,
+      windowLabel: `${year}年${month+1}月8〜10日`
+    };
+  }
+}
+
+function checkSubmissionWindow() {
+  const now = new Date();
+  const { year, month } = getMonthYear(monthOffset);
+  const win = getSubmissionWindow(currentPeriod, year, month);
+  const isOpen   = now >= win.start && now <= win.end;
+  const isPast   = now > win.end;
+
+  const banner   = document.getElementById('mp-window-banner');
+  const formBody = document.getElementById('mp-form-body');
+  const submitBtn = document.getElementById('submit-btn');
+
+  let cls, icon, title, sub;
+  if (isOpen) {
+    cls = 'open'; icon = '✅'; title = '提出期間中です';
+    sub = `${win.label}のシフト提出期間：${win.windowLabel}`;
+  } else if (isPast) {
+    cls = 'closed'; icon = '⛔'; title = '提出期間が終了しました';
+    sub = `${win.label}（${win.windowLabel}）は終了しています`;
+  } else {
+    cls = 'soon'; icon = '🕐'; title = 'まだ提出期間前です';
+    sub = `${win.label}の提出期間：${win.windowLabel}`;
+  }
+
+  banner.innerHTML = `<div class="window-banner ${cls}">
+    <div class="wb-icon">${icon}</div>
+    <div class="wb-body"><strong>${title}</strong>${sub}</div>
+  </div>`;
+
+  if (isOpen) {
+    formBody.classList.remove('form-locked');
+    submitBtn.disabled = false;
+  } else {
+    formBody.classList.add('form-locked');
+    submitBtn.disabled = true;
+  }
+}
+
+// ===== SUBMIT =====
+function submitShift() {
+  if (!currentUser) return;
+  const days = [];
+  document.querySelectorAll('.day-row').forEach(row => {
+    const dateStr = row.dataset.date;
+    const selected = row.querySelector('.status-btn.selected');
+    if (!selected) return;
+    const status = selected.dataset.status;
+    let entry = { date: dateStr, status };
+    if (status === 'tri') {
+      entry.start = document.getElementById(`ts-${dateStr}`)?.value || '17:00';
+      entry.end   = document.getElementById(`te-${dateStr}`)?.value || '23:00';
+    }
+    days.push(entry);
+  });
+
+  if (days.length === 0) { alert('少なくとも1日選択してください'); return; }
+
+  const note = document.getElementById('staff-note').value;
+  const data = loadData();
+  data.unshift({
+    id: Date.now(),
+    name: currentUser.name,
+    days, note,
+    status: 'pending',
+    submittedAt: new Date().toISOString()
+  });
+  saveData(data);
+
+  document.getElementById('staff-note').value = '';
+  document.querySelectorAll('.status-btn.selected').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.time-picker.visible').forEach(t => t.classList.remove('visible'));
+
+  showToast();
+}
+
+function showToast() {
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ===== ADMIN =====
+let currentFilter = 'all';
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  renderAdmin();
+}
+
+function updateStatus(id, status) {
+  const data = loadData();
+  const item = data.find(d => d.id === id);
+  if (item) { item.status = status; saveData(data); renderAdmin(); }
+}
+
+function clearAll() {
+  if (confirm('全データを削除しますか？')) { saveData([]); renderAdmin(); }
+}
+
+function renderAdmin() {
+  const data = loadData();
+  document.getElementById('s-total').textContent     = data.length;
+  document.getElementById('s-pending').textContent   = data.filter(d => d.status === 'pending').length;
+  document.getElementById('s-confirmed').textContent = data.filter(d => d.status === 'confirmed').length;
+
+  const filtered = currentFilter === 'all' ? data : data.filter(d => d.status === currentFilter);
+  const list = document.getElementById('admin-cards');
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty"><div class="ei">📋</div><p>提出がありません</p></div>`;
+    return;
+  }
+
+  const sMap = { pending:['未確認','s-pending'], confirmed:['確定','s-confirmed'], declined:['却下','s-declined'] };
+  const mc = { ok:'ok', tri:'tri', ng:'ng' };
+  const ml = { ok:'○', tri:'△', ng:'×' };
+
+  list.innerHTML = filtered.map(item => {
+    const color = getColor(item.name);
+    const dt = new Date(item.submittedAt);
+    const dtStr = dt.toLocaleDateString('ja-JP',{month:'short',day:'numeric'}) + ' ' +
+                  dt.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+    const [sLabel, sCls] = sMap[item.status] || ['—',''];
+
+    const daysHtml = item.days.map(d => {
+      const obj = new Date(d.date + 'T00:00:00');
+      const dStr = obj.toLocaleDateString('ja-JP',{month:'short',day:'numeric',weekday:'short'});
+      const detail = d.status === 'tri' ? `${d.start} 〜 ${d.end}` : d.status === 'ok' ? '時間制限なし' : '出勤不可';
+      return `<div class="ds-row">
+        <div class="ds-date">${dStr}</div>
+        <div class="ds-mark ${mc[d.status]}">${ml[d.status]}</div>
+        <div class="ds-detail">${detail}</div>
+      </div>`;
+    }).join('');
+
+    const noteHtml = item.note ? `<div class="card-note">💬 ${item.note}</div>` : '';
+
+    return `<div class="card">
+      <div class="card-head">
+        <div class="card-person">
+          <div class="ca-avatar" style="background:${color}22;color:${color}">${item.name[0]}</div>
+          <div>
+            <div class="person-name">${item.name}</div>
+            <div class="person-time">${dtStr} 提出</div>
+          </div>
+        </div>
+        <span class="s-badge ${sCls}">${sLabel}</span>
+      </div>
+      <div class="card-body">
+        <div class="day-summary">${daysHtml}</div>
+        ${noteHtml}
+      </div>
+      <div class="card-actions">
+        <button class="act-btn ok"  onclick="updateStatus(${item.id},'confirmed')">✓ 確定</button>
+        <button class="act-btn ng"  onclick="updateStatus(${item.id},'declined')">✕ 却下</button>
+        <button class="act-btn rst" onclick="updateStatus(${item.id},'pending')">↩ 戻す</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', () => {
+  buildStaffGrid();
+});
+</script>
+</body>
+</html>

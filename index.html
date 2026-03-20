@@ -1270,6 +1270,77 @@ body {
 .toggle-switch input:checked + .toggle-track { background: var(--tri); }
 .toggle-switch input:checked + .toggle-track::after { transform: translateX(20px); }
 
+/* 再提出セクション */
+.resubmit-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+.resubmit-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.resubmit-sub { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+.resubmit-prev { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+.resubmit-btn {
+  width: 100%; padding: 11px;
+  background: none;
+  border: 1px solid var(--tri);
+  border-radius: 8px;
+  color: var(--tri);
+  font-size: 13px;
+  font-family: 'Noto Sans JP', sans-serif;
+  cursor: pointer;
+}
+
+/* シフト確定パネル */
+.confirm-day-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.confirm-day-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface2);
+  font-size: 13px; font-weight: 600;
+}
+.confirm-staff-list { padding: 8px 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+.confirm-staff-chip {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.confirm-staff-chip.selected {
+  background: var(--tri);
+  border-color: var(--tri);
+  color: var(--bg);
+  font-weight: 600;
+}
+.confirm-time-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.no-applicant { font-size: 12px; color: var(--muted); padding: 8px 12px; }
+
+.publish-btn {
+  display: block; width: 100%;
+  padding: 14px;
+  margin-bottom: 10px;
+  background: var(--tri);
+  border: none;
+  border-radius: 10px;
+  color: var(--bg);
+  font-size: 15px; font-weight: 700;
+  font-family: 'Noto Sans JP', sans-serif;
+  cursor: pointer;
+}
+
 .bottom-right-menu {
   position: fixed;
   bottom: 24px;
@@ -1392,6 +1463,16 @@ body {
 
         <button class="submit-btn" id="submit-btn" onclick="submitShift()">シフト希望を提出する →</button>
       </div>
+
+      <!-- 再提出セクション -->
+      <div id="resubmit-section" style="display:none; margin-top:16px;">
+        <div class="resubmit-box">
+          <div class="resubmit-title">シフト再提出・変更</div>
+          <div class="resubmit-sub">提出済みの内容を変更できます。再提出すると前の内容は上書きされます。</div>
+          <div id="resubmit-prev"></div>
+          <button class="resubmit-btn" onclick="startResubmit()">変更して再提出する</button>
+        </div>
+      </div>
     </div>
 
     <!-- CONFIRMED TAB -->
@@ -1436,6 +1517,7 @@ body {
       <button class="list-check-btn half" onclick="openStaffStatusList()">一覧確認</button>
       <button class="list-check-btn half" onclick="openAdminCalendar()">シフトカレンダー</button>
     </div>
+    <button class="list-check-btn" style="margin-bottom:16px; border-color:var(--tri); color:var(--tri);" onclick="openAdminConfirm()">シフト確定・発表</button>
 
     <div class="test-mode-row">
       <span class="test-mode-label">テストモード（提出期間を強制オープン）</span>
@@ -1482,6 +1564,25 @@ body {
     <div class="settings-title">提出状況</div>
     <div id="staff-status-list"></div>
     <button class="settings-close" onclick="closeStaffStatusList()">閉じる</button>
+  </div>
+</div>
+
+<!-- ADMIN CONFIRM OVERLAY -->
+<div class="staff-status-overlay" id="admin-confirm-overlay" onclick="closeAdminConfirm(event)">
+  <div class="staff-status-box admin-cal-box">
+    <div class="settings-handle"></div>
+    <div class="admin-cal-header">
+      <button class="period-btn" onclick="adminConfirmMonth(-1)">‹</button>
+      <div class="cal-month-label" id="admin-confirm-label"></div>
+      <button class="period-btn" onclick="adminConfirmMonth(1)">›</button>
+    </div>
+    <div class="admin-cal-period-row">
+      <button class="filter-chip active" id="admin-conf-first"  onclick="adminConfirmPeriod('first',this)">前半 1〜15日</button>
+      <button class="filter-chip"        id="admin-conf-second" onclick="adminConfirmPeriod('second',this)">後半 16〜末日</button>
+    </div>
+    <div id="admin-confirm-body"></div>
+    <button class="publish-btn" onclick="publishShifts()">発表する</button>
+    <button class="settings-close" onclick="closeAdminConfirm()">閉じる</button>
   </div>
 </div>
 
@@ -1570,6 +1671,7 @@ function getColor(name) {
 
 // ===== STORAGE (Firebase) =====
 let _shiftData = [];
+let _publishedData = {}; // { 'YYYY-MM-DD': [{name, start?, end?}] }
 function loadData() { return _shiftData; }
 
 function saveData(d) {
@@ -1836,15 +1938,21 @@ async function loadHolidays() {
 let confirmedMonthOffset = 0;
 
 function renderConfirmed(name) {
-  const all = loadData().filter(d => d.name === name && d.status === 'confirmed');
   const list = document.getElementById('confirmed-list');
   if (!list) return;
 
-  // 日付→シフト情報のマップ
+  // /published から自分のシフトを取得（なければ旧来の confirmed submissions）
   const shiftMap = {};
-  all.forEach(item => {
-    item.days.forEach(d => { shiftMap[d.date] = d; });
-  });
+  const hasPub = Object.keys(_publishedData).length > 0;
+  if (hasPub) {
+    Object.entries(_publishedData).forEach(([date, staff]) => {
+      const me = staff.find(s => s.name === name);
+      if (me) shiftMap[date] = { status: me.start ? 'tri' : 'ok', start: me.start || '', end: me.end || '' };
+    });
+  } else {
+    const all = loadData().filter(d => d.name === name && d.status === 'confirmed');
+    all.forEach(item => { item.days.forEach(d => { shiftMap[d.date] = d; }); });
+  }
 
   const now = new Date();
   const calBase = new Date(now.getFullYear(), now.getMonth() + confirmedMonthOffset, 1);
@@ -2118,6 +2226,7 @@ function checkSubmissionWindow() {
     formBody.classList.add('form-locked');
     submitBtn.disabled = true;
   }
+  checkResubmit();
 }
 
 // ===== SUBMIT =====
@@ -2140,7 +2249,8 @@ function submitShift() {
   if (days.length === 0) { alert('少なくとも1日選択してください'); return; }
 
   const note = document.getElementById('staff-note').value;
-  const data = loadData();
+  // 同じスタッフの既存提出を削除（再提出対応）
+  const data = loadData().filter(d => d.name !== currentUser.name);
   data.unshift({
     id: Date.now(),
     name: currentUser.name,
@@ -2155,6 +2265,35 @@ function submitShift() {
   document.querySelectorAll('.time-picker.visible').forEach(t => t.classList.remove('visible'));
 
   showToast();
+  // ホーム（確定シフトタブ）へ自動遷移
+  setTimeout(() => switchMyTab('confirmed', document.querySelectorAll('.mypage-tab')[0]), 300);
+}
+
+function startResubmit() {
+  // 再提出：フォームのロックを解除してシフト提出フォームへスクロール
+  const formBody = document.getElementById('mp-form-body');
+  formBody.classList.remove('form-locked');
+  document.getElementById('submit-btn').disabled = false;
+  document.getElementById('resubmit-section').style.display = 'none';
+  formBody.scrollIntoView({ behavior: 'smooth' });
+}
+
+function checkResubmit() {
+  const sec = document.getElementById('resubmit-section');
+  if (!sec || !currentUser) return;
+  const existing = loadData().find(d => d.name === currentUser.name);
+  if (existing) {
+    const dates = existing.days.map(d => {
+      const dt = new Date(d.date + 'T00:00:00');
+      const label = dt.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
+      if (d.status === 'tri') return `${label} ${d.start}〜${d.end}`;
+      return label + (d.status === 'ok' ? ' ○' : ' ×');
+    });
+    document.getElementById('resubmit-prev').textContent = '提出済み：' + dates.slice(0, 5).join('、') + (dates.length > 5 ? '…' : '');
+    sec.style.display = 'block';
+  } else {
+    sec.style.display = 'none';
+  }
 }
 
 function showToast() {
@@ -2304,6 +2443,152 @@ function openStaffStatusList() {
 function closeStaffStatusList(e) {
   if (e && e.target !== e.currentTarget) return;
   document.getElementById('staff-status-overlay').classList.remove('visible');
+}
+
+// ===== ADMIN CONFIRM PANEL =====
+let adminConfirmOffset = 0;
+let adminConfirmPeriodVal = 'first';
+let adminConfirmSelections = {}; // { 'YYYY-MM-DD': ['staff1', ...] }
+
+function openAdminConfirm() {
+  // 直近の有効期間をデフォルトに（期限切れ含む直近）
+  const now = new Date();
+  let found = false;
+  for (let offset = 2; offset >= -1; offset--) {
+    const { year, month } = getMonthYear(offset);
+    for (const period of ['second', 'first']) {
+      const win = getSubmissionWindow(period, year, month);
+      if (now > win.end) {
+        adminConfirmOffset = offset;
+        adminConfirmPeriodVal = period;
+        found = true; break;
+      }
+    }
+    if (found) break;
+  }
+  // 既存のpublishedデータで選択状態を初期化
+  adminConfirmSelections = {};
+  Object.entries(_publishedData).forEach(([date, staff]) => {
+    adminConfirmSelections[date] = staff.map(s => s.name);
+  });
+  renderAdminConfirm();
+  document.getElementById('admin-confirm-overlay').classList.add('visible');
+}
+
+function closeAdminConfirm(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('admin-confirm-overlay').classList.remove('visible');
+}
+
+function adminConfirmMonth(dir) {
+  adminConfirmOffset += dir;
+  renderAdminConfirm();
+}
+
+function adminConfirmPeriod(period, btn) {
+  adminConfirmPeriodVal = period;
+  document.getElementById('admin-conf-first').classList.toggle('active', period === 'first');
+  document.getElementById('admin-conf-second').classList.toggle('active', period === 'second');
+  renderAdminConfirm();
+}
+
+function toggleConfirmStaff(dateStr, staffName) {
+  if (!adminConfirmSelections[dateStr]) adminConfirmSelections[dateStr] = [];
+  const arr = adminConfirmSelections[dateStr];
+  const idx = arr.indexOf(staffName);
+  if (idx >= 0) arr.splice(idx, 1);
+  else arr.push(staffName);
+  // チップの見た目を即時更新
+  const chip = document.querySelector(`.confirm-staff-chip[data-date="${dateStr}"][data-name="${staffName}"]`);
+  if (chip) chip.classList.toggle('selected', arr.includes(staffName));
+}
+
+function renderAdminConfirm() {
+  const { year, month } = getMonthYear(adminConfirmOffset);
+  document.getElementById('admin-confirm-label').textContent = `${year}年 ${month + 1}月`;
+
+  const lastDate = new Date(year, month + 1, 0).getDate();
+  const startDay = adminConfirmPeriodVal === 'first' ? 1 : 16;
+  const endDay   = adminConfirmPeriodVal === 'first' ? 15 : lastDate;
+  const WD = ['日','月','火','水','木','金','土'];
+
+  // 全申請から日付→スタッフ候補マップ
+  const availMap = {}; // { 'YYYY-MM-DD': [{name, start?, end?}] }
+  loadData().forEach(item => {
+    item.days.forEach(d => {
+      if (d.status === 'ng') return;
+      if (!availMap[d.date]) availMap[d.date] = [];
+      availMap[d.date].push({ name: item.name, start: d.start, end: d.end, status: d.status });
+    });
+  });
+
+  let html = '';
+  for (let day = startDay; day <= endDay; day++) {
+    const mm = String(month + 1).padStart(2, '0');
+    const dd = String(day).padStart(2, '0');
+    const dateStr = `${year}-${mm}-${dd}`;
+    const dow = new Date(year, month, day).getDay();
+    const isHol = !!holidayMap[dateStr];
+    let dowCls = 'weekday';
+    if (isHol || dow === 0) dowCls = 'holiday';
+    else if (dow === 6) dowCls = 'sat';
+
+    const candidates = availMap[dateStr] || [];
+    const selected = adminConfirmSelections[dateStr] || [];
+
+    const chipsHtml = candidates.length === 0
+      ? `<div class="no-applicant">申請なし</div>`
+      : `<div class="confirm-staff-list">${candidates.map(c => {
+          const isSel = selected.includes(c.name);
+          const timeStr = c.status === 'tri'
+            ? (c.start||'').replace(':00','') + '〜' + ((c.end === 'LAST' || c.end === 'ラスト') ? 'LAST' : (c.end||'').replace(':00',''))
+            : '○';
+          return `<div class="confirm-staff-chip ${isSel ? 'selected' : ''}"
+            data-date="${dateStr}" data-name="${c.name}"
+            onclick="toggleConfirmStaff('${dateStr}','${c.name}')">
+            ${c.name}<br><span class="confirm-time-label">${timeStr}</span>
+          </div>`;
+        }).join('')}</div>`;
+
+    html += `<div class="confirm-day-card">
+      <div class="confirm-day-head">
+        <span>${month+1}/${day}</span>
+        <span class="dow-badge ${dowCls}">${WD[dow]}${isHol ? '・祝' : ''}</span>
+      </div>
+      ${chipsHtml}
+    </div>`;
+  }
+
+  document.getElementById('admin-confirm-body').innerHTML = html ||
+    '<p style="color:var(--muted);text-align:center;padding:20px">データがありません</p>';
+}
+
+function publishShifts() {
+  if (!confirm('選択した内容で発表しますか？\n全スタッフの確定シフトが更新されます。')) return;
+
+  // adminConfirmSelectionsをFirebase /publishedに書き込む
+  // 各日付・スタッフの時間を申請データから取得
+  const allData = loadData();
+  const publishObj = {};
+
+  Object.entries(adminConfirmSelections).forEach(([date, names]) => {
+    if (!names || names.length === 0) return;
+    publishObj[date] = names.map(name => {
+      const sub = allData.find(d => d.name === name);
+      const dayEntry = sub?.days.find(d => d.date === date);
+      return {
+        name,
+        start: dayEntry?.start || '',
+        end:   dayEntry?.end   || '',
+      };
+    });
+  });
+
+  set(ref(db, 'published'), Object.keys(publishObj).length > 0 ? publishObj : null)
+    .then(() => {
+      alert('発表しました！全スタッフのシフトに反映されました。');
+      document.getElementById('admin-confirm-overlay').classList.remove('visible');
+    });
 }
 
 // ===== ADMIN CALENDAR =====
@@ -2499,6 +2784,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const data = snapshot.val();
     _shiftData = data ? Object.values(data) : [];
     if (currentUser?.role === 'admin') renderAdmin();
+    if (currentUser?.role === 'staff') { renderConfirmed(currentUser.name); checkResubmit(); }
+  });
+
+  // 発表済みシフトをリアルタイム監視
+  onValue(ref(db, 'published'), (snapshot) => {
+    _publishedData = snapshot.val() || {};
     if (currentUser?.role === 'staff') renderConfirmed(currentUser.name);
   });
 });
@@ -2520,6 +2811,13 @@ window.clearAll             = clearAll;
 window.openStaffStatusList  = openStaffStatusList;
 window.closeStaffStatusList = closeStaffStatusList;
 window.toggleTestMode       = toggleTestMode;
+window.startResubmit        = startResubmit;
+window.openAdminConfirm     = openAdminConfirm;
+window.closeAdminConfirm    = closeAdminConfirm;
+window.adminConfirmMonth    = adminConfirmMonth;
+window.adminConfirmPeriod   = adminConfirmPeriod;
+window.toggleConfirmStaff   = toggleConfirmStaff;
+window.publishShifts        = publishShifts;
 window.openAdminCalendar    = openAdminCalendar;
 window.closeAdminCalendar   = closeAdminCalendar;
 window.adminCalMonth        = adminCalMonth;

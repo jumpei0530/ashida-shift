@@ -865,6 +865,94 @@ body {
 }
 
 .toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ===== REGISTER OVERLAY ===== */
+.reg-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(8px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+}
+
+.reg-overlay.visible { display: flex; }
+
+.reg-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px 28px;
+  width: 340px;
+  max-width: calc(100vw - 40px);
+}
+
+.reg-box-title {
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.reg-box-sub {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.reg-fields { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+
+.reg-field-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.1em;
+}
+
+.reg-error-msg {
+  text-align: center;
+  font-size: 12px;
+  color: var(--ng);
+  min-height: 16px;
+  margin-bottom: 8px;
+}
+
+.reg-submit-btn {
+  width: 100%; padding: 13px;
+  background: var(--tri);
+  color: #0e0e0e;
+  border: none;
+  border-radius: 10px;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 14px; font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 8px;
+}
+
+.reg-submit-btn:hover { background: #f0c84f; }
+
+.reg-cancel-btn {
+  width: 100%; padding: 10px;
+  border: none; background: none;
+  color: var(--muted); font-size: 13px;
+  cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+}
+
+.login-register-link {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.login-register-link:hover { color: var(--ok); }
 </style>
 </head>
 <body>
@@ -880,7 +968,29 @@ body {
       <div class="staff-grid" id="staff-grid"></div>
     </div>
 
+    <div class="login-register-link" onclick="openRegisterOverlay()">＋ 新規登録</div>
     <div class="admin-link" onclick="openPin('admin')">管理者としてログイン</div>
+  </div>
+</div>
+
+<!-- ===== REGISTER OVERLAY ===== -->
+<div class="reg-overlay" id="reg-overlay">
+  <div class="reg-box">
+    <div class="reg-box-title">新規スタッフ登録</div>
+    <div class="reg-box-sub">氏名と4桁のPINを設定してください</div>
+    <div class="reg-fields">
+      <div>
+        <div class="reg-field-label">氏名</div>
+        <input class="form-input" id="reg-overlay-name" type="text" placeholder="例：山田" maxlength="10" style="width:100%">
+      </div>
+      <div>
+        <div class="reg-field-label">PIN（4桁の数字）</div>
+        <input class="form-input" id="reg-overlay-pin" type="password" placeholder="例：1234" maxlength="4" inputmode="numeric" style="width:100%">
+      </div>
+    </div>
+    <div class="reg-error-msg" id="reg-overlay-error"></div>
+    <button class="reg-submit-btn" onclick="submitRegisterOverlay()">登録する</button>
+    <button class="reg-cancel-btn" onclick="closeRegisterOverlay()">キャンセル</button>
   </div>
 </div>
 
@@ -1510,6 +1620,34 @@ function showToast() {
   const t = document.getElementById('toast');
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ===== REGISTER OVERLAY (login screen) =====
+function openRegisterOverlay() {
+  document.getElementById('reg-overlay-name').value = '';
+  document.getElementById('reg-overlay-pin').value  = '';
+  document.getElementById('reg-overlay-error').textContent = '';
+  document.getElementById('reg-overlay').classList.add('visible');
+  setTimeout(() => document.getElementById('reg-overlay-name').focus(), 100);
+}
+
+function closeRegisterOverlay() {
+  document.getElementById('reg-overlay').classList.remove('visible');
+}
+
+function submitRegisterOverlay() {
+  const name = document.getElementById('reg-overlay-name').value.trim();
+  const pin  = document.getElementById('reg-overlay-pin').value.trim();
+  const err  = document.getElementById('reg-overlay-error');
+
+  if (!name) { err.textContent = '氏名を入力してください'; return; }
+  if (!/^\d{4}$/.test(pin)) { err.textContent = 'PINは4桁の数字で入力してください'; return; }
+  if (STAFF_LIST.find(s => s.name === name)) { err.textContent = '同じ氏名のスタッフが既に存在します'; return; }
+
+  STAFF_LIST.push({ name, pin });
+  saveStaff();
+  buildStaffGrid();
+  closeRegisterOverlay();
 }
 
 // ===== STAFF MANAGEMENT =====

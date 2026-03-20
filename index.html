@@ -742,6 +742,115 @@ body {
 .empty .ei { font-size: 32px; margin-bottom: 10px; }
 .empty p { font-size: 13px; }
 
+/* ===== STAFF MANAGEMENT ===== */
+.admin-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.admin-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.admin-section-head h2 { font-size: 14px; font-weight: 700; }
+
+.admin-section-arrow {
+  color: var(--muted);
+  font-size: 18px;
+  transition: transform 0.2s;
+}
+
+.admin-section-arrow.open { transform: rotate(90deg); }
+
+.admin-section-body {
+  display: none;
+  padding: 0 18px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.staff-reg-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  padding-top: 14px;
+  margin-bottom: 14px;
+}
+
+.form-input {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 14px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.form-input:focus { border-color: var(--tri); }
+.form-input::placeholder { color: var(--muted); }
+
+.reg-btn {
+  padding: 10px 16px;
+  background: var(--tri);
+  color: #0e0e0e;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.reg-btn:hover { background: #f0c84f; }
+
+.staff-list-table { display: flex; flex-direction: column; }
+
+.staff-list-row {
+  display: grid;
+  grid-template-columns: 34px 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(46,46,46,0.5);
+}
+
+.staff-list-row:last-child { border-bottom: none; }
+
+.sl-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; flex-shrink: 0;
+}
+
+.sl-name { font-size: 13px; }
+.sl-pin { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); }
+
+.del-staff-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: none;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.del-staff-btn:hover { border-color: var(--ng); color: var(--ng); }
+
 /* TOAST */
 .toast {
   position: fixed;
@@ -864,6 +973,22 @@ body {
       <button class="clear-btn" onclick="clearAll()">全削除</button>
     </div>
 
+    <!-- Staff management section -->
+    <div class="admin-section">
+      <div class="admin-section-head" onclick="toggleStaffSection()">
+        <h2>スタッフ管理</h2>
+        <span class="admin-section-arrow" id="staff-section-arrow">›</span>
+      </div>
+      <div class="admin-section-body" id="staff-section-body">
+        <div class="staff-reg-form">
+          <input class="form-input" id="reg-name" type="text" placeholder="氏名" maxlength="10">
+          <input class="form-input" id="reg-pin" type="password" placeholder="PIN（4桁）" maxlength="4" inputmode="numeric">
+          <button class="reg-btn" onclick="registerStaff()">登録</button>
+        </div>
+        <div class="staff-list-table" id="staff-list-table"></div>
+      </div>
+    </div>
+
     <div class="stats">
       <div class="stat"><div class="stat-n" id="s-total"     style="color:var(--text)">0</div><div class="stat-l">合計</div></div>
       <div class="stat"><div class="stat-n" id="s-pending"   style="color:var(--tri)">0</div><div class="stat-l">未確認</div></div>
@@ -913,7 +1038,7 @@ body {
 
 <script>
 // ===== CONFIG =====
-const STAFF_LIST = [
+let STAFF_LIST = [
   { name: '田中', pin: '1111' },
   { name: '佐藤', pin: '2222' },
   { name: '山田', pin: '3333' },
@@ -1367,6 +1492,54 @@ function showToast() {
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 
+// ===== STAFF MANAGEMENT =====
+function toggleStaffSection() {
+  const body  = document.getElementById('staff-section-body');
+  const arrow = document.getElementById('staff-section-arrow');
+  const isOpen = body.style.display === 'block';
+  body.style.display = isOpen ? 'none' : 'block';
+  arrow.classList.toggle('open', !isOpen);
+}
+
+function registerStaff() {
+  const nameInput = document.getElementById('reg-name');
+  const pinInput  = document.getElementById('reg-pin');
+  const name = nameInput.value.trim();
+  const pin  = pinInput.value.trim();
+
+  if (!name) { alert('氏名を入力してください'); return; }
+  if (!/^\d{4}$/.test(pin)) { alert('PINは4桁の数字で入力してください'); return; }
+  if (STAFF_LIST.find(s => s.name === name)) { alert('同じ氏名のスタッフが既に存在します'); return; }
+
+  STAFF_LIST.push({ name, pin });
+  nameInput.value = '';
+  pinInput.value  = '';
+  buildStaffGrid();
+  renderStaffList();
+}
+
+function deleteStaff(name) {
+  if (!confirm(`「${name}」を削除しますか？`)) return;
+  const idx = STAFF_LIST.findIndex(s => s.name === name);
+  if (idx !== -1) STAFF_LIST.splice(idx, 1);
+  buildStaffGrid();
+  renderStaffList();
+}
+
+function renderStaffList() {
+  const table = document.getElementById('staff-list-table');
+  if (!table) return;
+  table.innerHTML = STAFF_LIST.map(s => {
+    const color = getColor(s.name);
+    return `<div class="staff-list-row">
+      <div class="sl-avatar" style="background:${color}22;color:${color}">${s.name[0]}</div>
+      <div class="sl-name">${s.name}</div>
+      <div class="sl-pin">PIN: ****</div>
+      <button class="del-staff-btn" onclick="deleteStaff('${s.name}')">削除</button>
+    </div>`;
+  }).join('');
+}
+
 // ===== ADMIN =====
 let currentFilter = 'all';
 
@@ -1388,6 +1561,7 @@ function clearAll() {
 }
 
 function renderAdmin() {
+  renderStaffList();
   const data = loadData();
   document.getElementById('s-total').textContent     = data.length;
   document.getElementById('s-pending').textContent   = data.filter(d => d.status === 'pending').length;
